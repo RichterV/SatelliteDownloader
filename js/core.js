@@ -694,6 +694,36 @@ function percentiles(data, lo, hi, nodata = 0) {
   return [a, b > a ? b : a + 1];
 }
 
+// ---------- navegação da prévia (zoom e arraste) ----------
+// view = { z, cx, cy }: zoom (1 = imagem inteira) e centro da tela em coordenadas de pixel da imagem.
+// g = { W, H, cw, ch, k0 }: tamanho da imagem, tamanho do canvas e escala base (imagem inteira encaixada).
+// No canvas: x = ix * s + tx, com s = k0 * z.
+function maxZoom(g) { return Math.max(8, 64 / g.k0); } // até um pixel da imagem ocupar ~64 px (mín. 8x)
+function fitView(g) { return { z: 1, cx: g.W / 2, cy: g.H / 2 }; }
+function clampView(v, g) {
+  const z = Math.min(maxZoom(g), Math.max(1, v.z)), s = g.k0 * z;
+  if (z === 1) return fitView(g);
+  // como no QGIS: o ponto sob o cursor fica fixo no zoom; o arraste só não deixa a imagem sair da tela
+  // (o centro da vista fica sempre dentro da imagem)
+  return { z, cx: Math.min(g.W, Math.max(0, v.cx)), cy: Math.min(g.H, Math.max(0, v.cy)) };
+}
+function viewTransform(v, g) {
+  const s = g.k0 * v.z;
+  return { s, tx: g.cw / 2 - v.cx * s, ty: g.ch / 2 - v.cy * s };
+}
+// Zoom mantendo fixo o ponto da imagem sob o cursor (x, y no canvas)
+function zoomAt(v, x, y, factor, g) {
+  const { s, tx, ty } = viewTransform(v, g);
+  const ix = (x - tx) / s, iy = (y - ty) / s;
+  const z = Math.min(maxZoom(g), Math.max(1, v.z * factor)), s2 = g.k0 * z;
+  return clampView({ z, cx: ix - (x - g.cw / 2) / s2, cy: iy - (y - g.ch / 2) / s2 }, g);
+}
+// Arraste: a imagem acompanha o mouse (dx, dy em px de canvas)
+function panBy(v, dx, dy, g) {
+  const s = g.k0 * v.z;
+  return clampView({ z: v.z, cx: v.cx - dx / s, cy: v.cy - dy / s }, g);
+}
+
 // ---------- inspeção de pixel ----------
 // Posição (x, y) no canvas da prévia => pixel (c, r) da imagem; null se fora. sx/sy = px de canvas por pixel da imagem.
 function canvasToPixel(x, y, sx, sy, W, H) {
@@ -722,7 +752,7 @@ function zipFile(name, buf) {
 
 globalThis.Core = {
   SENSORS, MODIS_SINU, readVectorFiles, zipFile, parseGeoJSON, stacSearch, searchRange, orderCandidates, checkCandidate, loadImage,
-  buildGeoTIFF, percentiles, previewScale, canvasToPixel, pixelValues, pixelLonLat, addDays, isoDay, crsLabel, isGeographic,
+  buildGeoTIFF, percentiles, previewScale, maxZoom, fitView, clampView, viewTransform, zoomAt, panBy, canvasToPixel, pixelValues, pixelLonLat, addDays, isoDay, crsLabel, isGeographic,
   // expostos para os testes
   ensureProj, projectPolys, pointInRing, footprintContains, rasterize, signHref, assetOf, gridOf, epsgOf, itemDates,
 };

@@ -57,7 +57,7 @@ test('interface: balão do pixel existe dentro da prévia e o clique está ligad
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const app = fs.readFileSync(path.join(ROOT, 'js', 'app.js'), 'utf8');
   assert.match(html, /id="viewWrap"[\s\S]*id="view"[\s\S]*id="pixelPop"/);
-  assert.match(app, /\$\('view'\)\.addEventListener\('click'/);
+  assert.match(app, /\$\('view'\)\.addEventListener\('pointerup'/, 'clique sem arrastar seleciona o pixel');
   assert.match(app, /strokeStyle = '#ff2d2d'/, 'borda vermelha na seleção');
   assert.match(app, /e\.key === 'Escape'/, 'Esc fecha o balão');
   assert.doesNotMatch(app, /Convertido/, 'balão mostra só valores brutos');

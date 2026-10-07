@@ -121,10 +121,17 @@ button:disabled { opacity: .45; cursor: default; }
 .toggle { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 8px; cursor: pointer;
   background: rgba(15, 20, 17, .82); color: #fff; border: 1px solid rgba(255, 255, 255, .15); font-size: .85rem; backdrop-filter: blur(6px); }
 .toggle input { accent-color: #ffd400; margin: 0; }
+button.toggle { font-weight: 500; }
+button.toggle:hover { background: rgba(30, 38, 33, .92); }
+#zoomLevel { color: rgba(255, 255, 255, .65); font-variant-numeric: tabular-nums; }
 
 .result-foot { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;
   font-size: .8rem; color: var(--muted); }
 .result-foot details { text-align: right; }
+.view-hint { flex: 1; text-align: center; color: var(--muted); opacity: .8; white-space: nowrap; }
+.view-hint kbd { font: inherit; font-size: .72rem; padding: 0 5px; border: 1px solid var(--border); border-bottom-width: 2px;
+  border-radius: 4px; background: var(--field); color: var(--text); }
+@media (hover: none), (max-width: 860px) { .view-hint { display: none; } } /* sem mouse (celular) os comandos não se aplicam */
 .result-foot details[open] { flex-basis: 100%; text-align: left; }
 .bandlist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .bandlist span { padding: 2px 8px; border-radius: 999px; background: var(--field); border: 1px solid var(--border); color: var(--text); }
@@ -166,7 +173,9 @@ input:disabled { opacity: .5; }
 .sc-about { font-size: .76rem; color: var(--muted); line-height: 1.4; }
 
 /* ---------- inspeção de pixel ---------- */
-#view { cursor: crosshair; }
+#view { cursor: crosshair; touch-action: none; }
+#view.zoomed { cursor: grab; }
+#view.dragging { cursor: grabbing; }
 .pixel-pop { position: absolute; z-index: 5; min-width: 220px; max-width: 320px; max-height: calc(100% - 16px); overflow: auto;
   padding: 10px 12px; border-radius: 10px; background: rgba(15, 20, 17, .92); color: #fff; font-size: .8rem;
   border: 1px solid rgba(255, 255, 255, .15); box-shadow: 0 6px 24px rgba(0, 0, 0, .35); backdrop-filter: blur(6px); }

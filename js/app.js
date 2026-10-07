@@ -152,6 +152,7 @@ async function showCandidate(c, run) {
     state.fileName = `${state.fileBase}_${s.short}_${c.day}.tif`;
     $('dlInfo').textContent = `${state.fileName.replace(/\.tif$/, '.zip')} · ${img.W} × ${img.H} px`;
     showResult(true);
+    state.view = null; renderBase();
     draw();
     setStatus('');
   } catch (err) { console.error(err); setStatus('Erro ao baixar as bandas: ' + err.message, 'err'); }
@@ -172,8 +173,9 @@ function previewMaxHeight() {
   return Math.max(240, window.innerHeight - used);
 }
 
-function draw() {
-  const img = state.img; if (!img || $('resultPanel').classList.contains('hidden')) return;
+// Imagem da composição em resolução nativa; refeita só ao trocar a imagem ou a composição
+function renderBase() {
+  const img = state.img;
   const cp = availableComposites()[$('composite').value || 0];
   const chans = cp.b.map(n => img.bands.find(b => b.name === n).data);
   const st = chans.map(d => Core.percentiles(d, 0.02, 0.98, img.nodata));
@@ -188,39 +190,61 @@ function draw() {
     px[i * 4 + 3] = valid ? 255 : 0;
   }
   octx.putImageData(id, 0, 0);
-  // ajusta à largura disponível e a ~70% da altura da janela
+  state.base = off;
+}
+
+const geom = () => ({ W: state.img.W, H: state.img.H, cw: $('view').width, ch: $('view').height, k0: state.k0 });
+
+// Canvas = largura toda da prévia x altura da imagem encaixada; sem zoom a imagem fica centrada,
+// com zoom ela usa toda a largura
+function draw() {
+  const img = state.img; if (!img || !state.base || $('resultPanel').classList.contains('hidden')) return;
   const maxW = $('viewWrap').clientWidth || 900, maxH = previewMaxHeight();
-  const k = Core.previewScale(img.W, img.H, maxW, maxH);
-  const cv = $('view'); cv.width = Math.round(img.W * k); cv.height = Math.round(img.H * k);
-  const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = k < 1;
-  ctx.drawImage(off, 0, 0, cv.width, cv.height);
+  state.k0 = Core.previewScale(img.W, img.H, maxW, maxH);
+  const cv = $('view'); cv.width = maxW; cv.height = Math.round(img.H * state.k0);
+  state.view = Core.clampView(state.view || Core.fitView(geom()), geom());
+  paint();
+}
+
+// Redesenha com o zoom/posição atuais (barato: usado no zoom e no arraste)
+function paint() {
+  const img = state.img; if (!img || !state.base) return;
+  const cv = $('view'), ctx = cv.getContext('2d');
+  const { s, tx, ty } = Core.viewTransform(state.view, geom());
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.imageSmoothingEnabled = s < 1;
+  ctx.setTransform(s, 0, 0, s, tx, ty); ctx.drawImage(state.base, 0, 0); ctx.setTransform(1, 0, 0, 1, 0, 0);
   if ($('showPoly').checked) {
     ctx.strokeStyle = '#ffd400'; ctx.lineWidth = 1.5;
     for (const p of img.polysPx) {
       ctx.beginPath();
-      for (const r of p) r.forEach(([x, y], j) => j ? ctx.lineTo(x * k, y * k) : ctx.moveTo(x * k, y * k));
+      for (const r of p) r.forEach(([x, y], j) => j ? ctx.lineTo(x * s + tx, y * s + ty) : ctx.moveTo(x * s + tx, y * s + ty));
       ctx.stroke();
     }
   }
-  drawSelection();
+  drawSelection(s, tx, ty);
+  const zoomed = state.view.z > 1.001;
+  $('btnFit').classList.toggle('hidden', !zoomed);
+  $('zoomLevel').textContent = Math.round(state.view.z * 100) + '%';
+  cv.classList.toggle('zoomed', zoomed);
 }
+let paintQueued = false;
+const schedulePaint = () => { if (!paintQueued) { paintQueued = true; requestAnimationFrame(() => { paintQueued = false; paint(); }); } };
 
 // ---------- inspeção de pixel ----------
 // Clique na prévia: borda vermelha no pixel e balão com o valor de cada banda
 const fmtNum = v => Number.isInteger(v) ? String(v) : (Math.abs(v) >= 1000 ? v.toFixed(1) : v.toPrecision(4)).replace('.', ',');
 
-function drawSelection() {
-  const img = state.img, sel = state.sel, cv = $('view');
-  if (!img || !sel) return;
-  const sx = cv.width / img.W, sy = cv.height / img.H;
+function drawSelection(s, tx, ty) {
+  const sel = state.sel; if (!sel) return;
   // pixels menores que a tela (imagem reduzida) ganham uma marca mínima de 8 px
-  const w = Math.max(sx, 8), h = Math.max(sy, 8);
-  const x = (sel.c + 0.5) * sx - w / 2, y = (sel.r + 0.5) * sy - h / 2;
-  const ctx = cv.getContext('2d');
+  const w = Math.max(s, 8);
+  const x = (sel.c + 0.5) * s + tx - w / 2, y = (sel.r + 0.5) * s + ty - w / 2;
+  const ctx = $('view').getContext('2d');
   ctx.lineWidth = 2;
-  ctx.strokeStyle = 'rgba(0, 0, 0, .6)'; ctx.strokeRect(x - 1, y - 1, w + 2, h + 2);
-  ctx.strokeStyle = '#ff2d2d'; ctx.strokeRect(x, y, w, h);
-  placePopup();
+  ctx.strokeStyle = 'rgba(0, 0, 0, .6)'; ctx.strokeRect(x - 1, y - 1, w + 2, w + 2);
+  ctx.strokeStyle = '#ff2d2d'; ctx.strokeRect(x, y, w, w);
+  placePopup(s, tx, ty);
 }
 
 function showPixel(c, r) {
@@ -235,42 +259,78 @@ function showPixel(c, r) {
     `<button class="pp-close" aria-label="Fechar">×</button></div>` +
     `<table><thead><tr><th>Banda</th><th>Valor</th></tr></thead><tbody>${rows}</tbody></table>`;
   $('pixelPop').classList.remove('hidden');
-  draw();
+  paint();
 }
 
 function closePixel() {
   if (!state.sel) return;
-  state.sel = null; $('pixelPop').classList.add('hidden'); draw();
+  state.sel = null; $('pixelPop').classList.add('hidden'); paint();
 }
 
-// Posiciona o balão ao lado do pixel, sem sair da área da prévia
-function placePopup() {
-  const pop = $('pixelPop'), cv = $('view'), wrap = $('viewWrap'), img = state.img, sel = state.sel;
+// Posiciona o balão ao lado do pixel, sem sair da área da prévia; some se o pixel sair da tela pelo arraste
+function placePopup(s, tx, ty) {
+  const pop = $('pixelPop'), cv = $('view'), wrap = $('viewWrap'), sel = state.sel;
   if (!sel || pop.classList.contains('hidden')) return;
-  const sx = cv.width / img.W, sy = cv.height / img.H;
-  const px = cv.offsetLeft + (sel.c + 0.5) * sx, py = cv.offsetTop + (sel.r + 0.5) * sy;
-  const gap = Math.max(sx, sy) / 2 + 10, W = wrap.clientWidth, H = wrap.clientHeight;
+  const cx = (sel.c + 0.5) * s + tx, cy = (sel.r + 0.5) * s + ty;
+  pop.style.visibility = cx < 0 || cy < 0 || cx > cv.width || cy > cv.height ? 'hidden' : '';
+  const px = cv.offsetLeft + cx, py = cv.offsetTop + cy;
+  const gap = s / 2 + 10, W = wrap.clientWidth, H = wrap.clientHeight;
   const pw = pop.offsetWidth, ph = pop.offsetHeight;
   let left = px + gap; if (left + pw > W - 8) left = px - gap - pw;
-  let top = py - ph / 2;
   pop.style.left = Math.max(8, Math.min(left, W - pw - 8)) + 'px';
-  pop.style.top = Math.max(8, Math.min(top, H - ph - 8)) + 'px';
+  pop.style.top = Math.max(8, Math.min(py - ph / 2, H - ph - 8)) + 'px';
 }
 
-$('view').addEventListener('click', e => {
-  const img = state.img, cv = $('view'); if (!img) return;
-  const rect = cv.getBoundingClientRect();
-  const x = (e.clientX - rect.left) * cv.width / rect.width, y = (e.clientY - rect.top) * cv.height / rect.height;
-  const p = Core.canvasToPixel(x, y, cv.width / img.W, cv.height / img.H, img.W, img.H);
-  if (p) showPixel(p.c, p.r);
+// ---------- zoom (Ctrl + scroll do mouse) e arraste ----------
+// posição do evento em px de canvas
+function canvasPoint(e) {
+  const cv = $('view'), r = cv.getBoundingClientRect();
+  return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height];
+}
+
+$('view').addEventListener('wheel', e => {
+  if (!e.ctrlKey || !state.img) return; // sem Ctrl o scroll segue normal
+  e.preventDefault(); // impede o zoom da página
+  const [x, y] = canvasPoint(e);
+  const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY; // linhas => px (Firefox)
+  state.view = Core.zoomAt(state.view, x, y, Math.exp(-dy * 0.0015), geom());
+  schedulePaint();
+}, { passive: false });
+
+// Arrastar move a imagem; clique sem arrastar (< 4 px) seleciona o pixel
+let drag = null;
+$('view').addEventListener('pointerdown', e => {
+  if (e.button !== 0 || !state.img) return;
+  drag = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, moved: false };
+  $('view').setPointerCapture(e.pointerId);
 });
+$('view').addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 4) return;
+  drag.moved = true; $('view').classList.add('dragging');
+  const cv = $('view'), ratio = cv.width / cv.getBoundingClientRect().width;
+  state.view = Core.panBy(state.view, (e.clientX - drag.x) * ratio, (e.clientY - drag.y) * ratio, geom());
+  drag.x = e.clientX; drag.y = e.clientY;
+  schedulePaint();
+});
+$('view').addEventListener('pointerup', e => {
+  if (drag && !drag.moved) {
+    const [x, y] = canvasPoint(e), { s, tx, ty } = Core.viewTransform(state.view, geom());
+    const p = Core.canvasToPixel(x - tx, y - ty, s, s, state.img.W, state.img.H);
+    if (p) showPixel(p.c, p.r);
+  }
+  drag = null; $('view').classList.remove('dragging');
+});
+$('view').addEventListener('pointercancel', () => { drag = null; $('view').classList.remove('dragging'); });
+$('btnFit').addEventListener('click', () => { state.view = Core.fitView(geom()); paint(); });
+
 $('pixelPop').addEventListener('click', e => { if (e.target.closest('.pp-close')) closePixel(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closePixel(); });
 
 // ---------- eventos ----------
 $('btnSearch').addEventListener('click', runSearch);
-$('composite').addEventListener('change', draw);
-$('showPoly').addEventListener('change', draw);
+$('composite').addEventListener('change', () => { renderBase(); paint(); });
+$('showPoly').addEventListener('change', paint);
 window.addEventListener('resize', () => { clearTimeout(state.rt); state.rt = setTimeout(draw, 200); });
 $('btnNext').addEventListener('click', () => {
   if (state.idx >= 0 && state.cands[state.idx]) state.cands[state.idx].status = 'rejected';
