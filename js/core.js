@@ -744,6 +744,34 @@ function pixelLonLat(img, c, r) {
   return proj4(ensureProj(img.epsg), 'EPSG:4326', [x, y]);
 }
 
+// ---------- NDVI ----------
+// NDVI = (nir - red) / (nir + red), calculado sobre a REFLECTÂNCIA (valor * escala + offset de cada banda).
+// Usar o valor bruto daria errado onde há offset (Landsat: -0,2). NaN onde falta dado.
+function hasNdvi(img) { return ['nir', 'red'].every(n => img.bands.some(b => b.name === n)); }
+function ndviAt(img, i) {
+  const nir = img.bands.find(b => b.name === 'nir'), red = img.bands.find(b => b.name === 'red');
+  const n = nir.data[i], r = red.data[i];
+  if (n === img.nodata || r === img.nodata || Number.isNaN(n) || Number.isNaN(r)) return NaN;
+  const nr = n * nir.scale + nir.offset, rr = r * red.scale + red.offset, s = nr + rr;
+  return s === 0 ? NaN : Math.max(-1, Math.min(1, (nr - rr) / s));
+}
+function ndvi(img) {
+  const out = new Float32Array(img.W * img.H);
+  for (let i = 0; i < out.length; i++) out[i] = ndviAt(img, i);
+  return out;
+}
+// escala de cores: água (azul) -> solo (marrom) -> amarelo -> verdes -> floresta densa
+const NDVI_STOPS = [[-1, [30, 70, 130]], [-0.15, [110, 140, 165]], [0, [160, 82, 45]], [0.2, [217, 180, 95]], [0.4, [232, 227, 107]], [0.6, [124, 195, 90]], [0.8, [31, 122, 58]], [1, [11, 77, 36]]];
+function ndviColor(v) {
+  if (Number.isNaN(v)) return null;
+  v = Math.max(-1, Math.min(1, v));
+  for (let k = 1; k < NDVI_STOPS.length; k++) if (v <= NDVI_STOPS[k][0]) {
+    const [a, ca] = NDVI_STOPS[k - 1], [b, cb] = NDVI_STOPS[k], t = (v - a) / (b - a);
+    return ca.map((c, j) => Math.round(c + (cb[j] - c) * t));
+  }
+  return NDVI_STOPS.at(-1)[1];
+}
+
 // ---------- zip ----------
 function zipFile(name, buf) {
   return new Promise((resolve, reject) =>
@@ -752,7 +780,7 @@ function zipFile(name, buf) {
 
 globalThis.Core = {
   SENSORS, MODIS_SINU, readVectorFiles, zipFile, parseGeoJSON, stacSearch, searchRange, orderCandidates, checkCandidate, loadImage,
-  buildGeoTIFF, percentiles, previewScale, maxZoom, fitView, clampView, viewTransform, zoomAt, panBy, canvasToPixel, pixelValues, pixelLonLat, addDays, isoDay, crsLabel, isGeographic,
+  buildGeoTIFF, percentiles, previewScale, maxZoom, fitView, clampView, viewTransform, zoomAt, panBy, canvasToPixel, pixelValues, pixelLonLat, hasNdvi, ndvi, ndviAt, ndviColor, NDVI_STOPS, addDays, isoDay, crsLabel, isGeographic,
   // expostos para os testes
   ensureProj, projectPolys, pointInRing, footprintContains, rasterize, signHref, assetOf, gridOf, epsgOf, itemDates,
 };

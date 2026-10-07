@@ -172,6 +172,15 @@ input:disabled { opacity: .5; }
 .sc-head b { font-size: .88rem; }
 .sc-about { font-size: .76rem; color: var(--muted); line-height: 1.4; }
 
+/* ---------- legenda do NDVI (mesmas cores de Core.NDVI_STOPS, de -0,2 a 1) ---------- */
+.ndvi-legend { position: absolute; left: 10px; bottom: 10px; z-index: 4; display: grid; grid-template-columns: auto 132px; gap: 2px 8px;
+  align-items: center; padding: 6px 9px; border-radius: 8px; background: rgba(15, 20, 17, .82); color: #fff; font-size: .72rem;
+  border: 1px solid rgba(255, 255, 255, .15); backdrop-filter: blur(6px); pointer-events: none; }
+.nl-title { font-weight: 700; grid-row: span 2; }
+.nl-bar { height: 8px; border-radius: 4px;
+  background: linear-gradient(90deg, rgb(105, 136, 163) 0%, rgb(110, 140, 165) 4.2%, rgb(160, 82, 45) 16.7%, rgb(217, 180, 95) 33.3%, rgb(232, 227, 107) 50%, rgb(124, 195, 90) 66.7%, rgb(31, 122, 58) 83.3%, rgb(11, 77, 36) 100%); }
+.nl-labels { display: flex; justify-content: space-between; color: rgba(255, 255, 255, .7); font-variant-numeric: tabular-nums; }
+.pixel-pop tr.pp-ndvi td { border-top: 1px solid rgba(255, 255, 255, .25); font-weight: 700; color: #b9f5c9; }
 /* ---------- inspeção de pixel ---------- */
 #view { cursor: crosshair; touch-action: none; }
 #view.zoomed { cursor: grab; }

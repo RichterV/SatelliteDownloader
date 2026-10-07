@@ -146,7 +146,7 @@ async function showCandidate(c, run) {
       ['Resolução', Core.isGeographic(img.epsg) ? `≈ ${Math.round(img.res * 111320)} m` : `${+img.res.toFixed(2)} m`],
       ['Projeção', Core.crsLabel(img.epsg)],
     ].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
-    $('composite').innerHTML = availableComposites().map((cp, i) => `<option value="${i}" title="${cp.b.join(', ')}">${cp.label}</option>`).join('');
+    $('composite').innerHTML = availableComposites().map((cp, i) => `<option value="${i}" title="${cp.title || cp.b.join(', ')}">${cp.label}</option>`).join('');
     $('bandSummary').textContent = `Bandas (${img.bands.length})`;
     $('bandlist').innerHTML = img.bands.map((b, i) => `<span><b>${i + 1}</b>${b.name}</span>`).join('');
     state.fileName = `${state.fileBase}_${s.short}_${c.day}.tif`;
@@ -161,7 +161,10 @@ async function showCandidate(c, run) {
 // ---------- visualização ----------
 function availableComposites() {
   const img = state.img;
-  return Core.SENSORS[state.params.sensor].composites.filter(c => c.b.every(n => img.bands.some(b => b.name === n)));
+  const list = Core.SENSORS[state.params.sensor].composites.filter(c => c.b.every(n => img.bands.some(b => b.name === n)));
+  // NDVI: só visualização (o .tif continua com as bandas originais)
+  if (Core.hasNdvi(img)) list.push({ label: 'NDVI', ndvi: true, b: ['nir', 'red'], title: '(nir - red) / (nir + red), sobre a reflectância' });
+  return list;
 }
 
 // Altura disponível para a prévia sem rolar a página: tela menos tudo o que não é o canvas
@@ -177,6 +180,8 @@ function previewMaxHeight() {
 function renderBase() {
   const img = state.img;
   const cp = availableComposites()[$('composite').value || 0];
+  $('ndviLegend').classList.toggle('hidden', !cp.ndvi);
+  if (cp.ndvi) return renderNdvi();
   const chans = cp.b.map(n => img.bands.find(b => b.name === n).data);
   const st = chans.map(d => Core.percentiles(d, 0.02, 0.98, img.nodata));
   const off = document.createElement('canvas'); off.width = img.W; off.height = img.H;
@@ -188,6 +193,20 @@ function renderBase() {
       px[i * 4 + k] = Math.max(0, Math.min(255, 255 * (v - st[k][0]) / (st[k][1] - st[k][0])));
     }
     px[i * 4 + 3] = valid ? 255 : 0;
+  }
+  octx.putImageData(id, 0, 0);
+  state.base = off;
+}
+
+// NDVI com escala de cores fixa (-1..1), sem realce: cores comparáveis entre imagens e datas
+function renderNdvi() {
+  const img = state.img, nd = Core.ndvi(img);
+  const off = document.createElement('canvas'); off.width = img.W; off.height = img.H;
+  const octx = off.getContext('2d'), id = octx.createImageData(img.W, img.H), px = id.data;
+  for (let i = 0; i < nd.length; i++) {
+    const c = Core.ndviColor(nd[i]);
+    if (!c) continue; // sem dado: transparente
+    px[i * 4] = c[0]; px[i * 4 + 1] = c[1]; px[i * 4 + 2] = c[2]; px[i * 4 + 3] = 255;
   }
   octx.putImageData(id, 0, 0);
   state.base = off;
@@ -257,9 +276,16 @@ function showPixel(c, r) {
   $('pixelPop').innerHTML =
     `<div class="pp-head"><span>Linha ${r}, coluna ${c}<small>${lat.toFixed(6)}, ${lon.toFixed(6)}</small></span>` +
     `<button class="pp-close" aria-label="Fechar">×</button></div>` +
-    `<table><thead><tr><th>Banda</th><th>Valor</th></tr></thead><tbody>${rows}</tbody></table>`;
+    `<table><thead><tr><th>Banda</th><th>Valor</th></tr></thead><tbody>${rows}${ndviRow(img, c, r)}</tbody></table>`;
   $('pixelPop').classList.remove('hidden');
   paint();
+}
+
+// NDVI do pixel (derivado, calculado sobre a reflectância); só para sensores com red e nir
+function ndviRow(img, c, r) {
+  if (!Core.hasNdvi(img)) return '';
+  const v = Core.ndviAt(img, r * img.W + c);
+  return `<tr class="pp-ndvi"><td>NDVI</td><td>${Number.isNaN(v) ? '<span class="pp-nd">sem dado</span>' : v.toFixed(3).replace('.', ',')}</td></tr>`;
 }
 
 function closePixel() {
