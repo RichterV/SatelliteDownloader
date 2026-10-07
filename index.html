@@ -84,7 +84,99 @@
 
   <section class="content">
     <div class="card empty" id="emptyState">
-      <svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 6h18v12H3zM3 15l5-5 4 4 3-3 6 6"/></svg>
+      <!-- animação em loop (só CSS): satélite solta dados => computador => zoom no mapa => mapa volta ao satélite -->
+      <svg class="sd-anim" viewBox="0 0 400 260" role="img" aria-label="Satélite enviando dados que viram um mapa no computador">
+        <defs>
+          <!-- linhas de plantio (eucalipto) -->
+          <pattern id="sd-rows" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(-12)">
+            <circle cx="1" cy="2" r="1.05" fill="rgba(20, 60, 35, .45)"/><circle cx="3" cy="2" r="1.05" fill="rgba(20, 60, 35, .45)"/>
+          </pattern>
+          <clipPath id="sd-screen-clip"><rect x="224" y="126" width="122" height="76" rx="4"/></clipPath>
+        </defs>
+        <circle class="sd-backdrop" cx="200" cy="130" r="128"/>
+        <g class="sd-world">
+          <path class="sd-orbit" d="M14 140 Q 100 -20 250 34"/>
+          <g class="sd-stars">
+            <path class="sd-star" style="animation-delay:0s" d="M182 36l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/>
+            <path class="sd-star" style="animation-delay:.7s" d="M352 46l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z"/>
+            <path class="sd-star" style="animation-delay:1.3s" d="M34 190l1.6 4 4 1.6-4 1.6-1.6 4-1.6-4-4-1.6 4-1.6z"/>
+            <path class="sd-star" style="animation-delay:.4s" d="M270 20l1.3 3.2 3.2 1.3-3.2 1.3-1.3 3.2-1.3-3.2-3.2-1.3 3.2-1.3z"/>
+            <path class="sd-star" style="animation-delay:1s" d="M150 120l1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2z"/>
+          </g>
+
+          <!-- satélite -->
+          <circle class="sd-sat-glow" cx="95" cy="62" r="52"/>
+          <g class="sd-sat-bob">
+            <g transform="translate(95 60) scale(1.35) translate(-95 -60) rotate(-20 95 60)">
+              <line class="sd-ink-line" x1="75" y1="60" x2="80" y2="60"/>
+              <line class="sd-ink-line" x1="110" y1="60" x2="115" y2="60"/>
+              <rect class="sd-panel" x="45" y="50" width="30" height="20" rx="2"/>
+              <path class="sd-panel-grid" d="M55 50v20M65 50v20M45 60h30"/>
+              <rect class="sd-panel" x="115" y="50" width="30" height="20" rx="2"/>
+              <path class="sd-panel-grid" d="M125 50v20M135 50v20M115 60h30"/>
+              <line class="sd-ink-line" x1="95" y1="46" x2="95" y2="36"/>
+              <circle class="sd-blink" cx="95" cy="34" r="3"/>
+              <rect class="sd-sat-body" x="80" y="46" width="30" height="28" rx="7"/>
+              <circle class="sd-ink" cx="90" cy="57" r="2"/>
+              <circle class="sd-ink" cx="100" cy="57" r="2"/>
+              <path class="sd-ink-line" d="M89 64q6 5 12 0"/>
+              <line class="sd-ink-line" x1="95" y1="74" x2="95" y2="80"/>
+              <path class="sd-dish" d="M86 80q9 10 18 0z"/>
+            </g>
+          </g>
+
+          <!-- computador -->
+          <rect class="sd-desk" x="160" y="233" width="235" height="9" rx="4.5"/>
+          <path class="sd-pc-stand" d="M273 210h24l6 17h-36z"/>
+          <rect class="sd-pc-stand" x="252" y="226" width="66" height="8" rx="4"/>
+          <rect class="sd-pc" x="215" y="118" width="140" height="92" rx="10"/>
+          <circle class="sd-led" cx="285" cy="206" r="1.6"/>
+          <rect class="sd-screen" x="224" y="126" width="122" height="76" rx="4"/>
+          <g class="sd-dots">
+            <circle style="animation-delay:0s" cx="271" cy="164" r="3.5"/>
+            <circle style="animation-delay:.2s" cx="285" cy="164" r="3.5"/>
+            <circle style="animation-delay:.4s" cx="299" cy="164" r="3.5"/>
+          </g>
+
+          <!-- mapa na tela -->
+          <g class="sd-map" clip-path="url(#sd-screen-clip)">
+            <rect class="sd-land" x="224" y="126" width="122" height="76"/>
+            <path class="sd-contour" d="M224 140c20-6 34 4 52-2s30-10 42-4 20 2 28 0M224 150c18-4 30 6 48 0s34-12 46-6 18 4 28 2"/>
+            <!-- talhões de eucalipto (idades diferentes) -->
+            <g class="sd-plots">
+              <g class="sd-stand" style="transform-origin:247px 141px"><path class="sd-st1" d="M233 131l27-2 3 23-28 2z"/><path class="sd-rows" d="M233 131l27-2 3 23-28 2z"/></g>
+              <g class="sd-stand" style="transform-origin:277px 140px;animation-delay:.12s"><path class="sd-st2" d="M264 129l25 1-1 22-23 1z"/><path class="sd-rows" d="M264 129l25 1-1 22-23 1z"/></g>
+              <g class="sd-stand" style="transform-origin:304px 143px;animation-delay:.24s"><path class="sd-st3" d="M292 131l24 3-2 19-23-2z"/><path class="sd-rows" d="M292 131l24 3-2 19-23-2z"/></g>
+              <g class="sd-stand" style="transform-origin:248px 186px;animation-delay:.36s"><path class="sd-st2" d="M236 176l25 1-1 19-26-1z"/><path class="sd-rows" d="M236 176l25 1-1 19-26-1z"/></g>
+              <g class="sd-stand" style="transform-origin:276px 187px;animation-delay:.48s"><path class="sd-st3" d="M265 177l23 2-2 17-22-2z"/><path class="sd-rows" d="M265 177l23 2-2 17-22-2z"/></g>
+            </g>
+            <!-- estrada de terra -->
+            <path class="sd-road" d="M224 167c18 2 34-6 52-4s30 8 44 4 18-10 26-12"/>
+            <path class="sd-road-mid" d="M224 167c18 2 34-6 52-4s30 8 44 4 18-10 26-12"/>
+            <!-- rio desaguando no lago -->
+            <ellipse class="sd-lake sd-pop" style="transform-origin:330px 186px;animation-delay:.2s" cx="330" cy="186" rx="14" ry="9"/>
+            <path class="sd-river-bank" d="M346 146c-5 4-3 9-6 13s-2 9-4 12-3 5-4 7"/>
+            <path class="sd-river" d="M346 146c-5 4-3 9-6 13s-2 9-4 12-3 5-4 7"/>
+            <rect class="sd-bridge" x="334.5" y="156" width="7" height="3.4" rx=".8" transform="rotate(-25 338 157.7)"/>
+            <!-- mata nativa ao longo do rio -->
+            <g class="sd-pop" style="transform-origin:300px 188px"><circle class="sd-forest" cx="296" cy="190" r="4.5"/><circle class="sd-forest2" cx="303" cy="185" r="4"/><circle class="sd-forest" cx="309" cy="196" r="4"/></g>
+            <g class="sd-pop" style="transform-origin:328px 141px;animation-delay:.15s"><circle class="sd-forest" cx="324" cy="142" r="4.5"/><circle class="sd-forest2" cx="331" cy="137" r="4.5"/><circle class="sd-forest" cx="333" cy="146" r="3.8"/></g>
+            <!-- sede da fazenda -->
+            <g class="sd-pop" style="transform-origin:322px 168px;animation-delay:.3s"><rect class="sd-house" x="318" y="166" width="8" height="6"/><path class="sd-roof" d="M316.5 166.5l5.5-5 5.5 5z"/></g>
+            <!-- rosa dos ventos e escala -->
+            <g class="sd-compass"><circle cx="229" cy="195" r="3.6"/><path d="M229 191.6l1.6 3.4h-3.2z"/><text x="229" y="189.6" class="sd-n">N</text></g>
+            <g class="sd-scalebar"><rect x="264" y="198" width="8" height="1.6"/><rect class="sd-sb2" x="272" y="198" width="8" height="1.6"/><text x="282" y="199.8">1 km</text></g>
+            <!-- pin no talhão -->
+            <g class="sd-pin"><path d="M276 147c-4-5-7-7.5-7-10.5a7 7 0 0 1 14 0c0 3-3 5.5-7 10.5z"/><circle cx="276" cy="136.5" r="2.4"/></g>
+            <rect class="sd-scan" x="224" y="126" width="3" height="76"/>
+          </g>
+          <rect class="sd-flash" x="224" y="126" width="122" height="76" rx="4"/>
+        </g>
+
+        <!-- pacote de dados descendo e mini-mapa subindo -->
+        <g class="sd-packet"><rect x="-20" y="-8" width="40" height="16" rx="4"/><text x="0" y="2.8">011101</text></g>
+        <g class="sd-up"><rect class="sd-up-card" x="-13" y="-9" width="26" height="18" rx="3"/><rect class="sd-up-plot" x="-9" y="-6" width="8" height="6"/><rect class="sd-up-plot2" x="1" y="-6" width="8" height="6"/><path class="sd-up-river" d="M-13 5c5-3 10 2 15-1s7-2 11-1"/></g>
+      </svg>
       <p>Carregue a área e busque uma imagem.</p>
     </div>
 

@@ -63,3 +63,25 @@ test('layout cabe na tela: formulário limitado à altura da janela e lista de s
   assert.match(html, /class="field sensor-field"[\s\S]*id="sensorOther"/);
   assert.match(app, /maxH = previewMaxHeight\(\)/, 'prévia dimensionada para não rolar a página');
 });
+
+test('tela vazia: animação em loop (só CSS) que some quando a imagem aparece', () => {
+  const empty = html.match(/<div class="card empty" id="emptyState">([\s\S]*?)<\/div>\s*\n\s*<div class="card hidden" id="resultPanel">/);
+  assert.ok(empty, 'cartão da tela vazia antes do resultado');
+  assert.match(empty[1], /<svg class="sd-anim"[^>]*role="img"[^>]*aria-label=/, 'SVG acessível');
+  assert.match(empty[1], /Carregue a área e busque uma imagem\./, 'frase mantida');
+  for (const cls of ['sd-sat-bob', 'sd-packet', 'sd-pc', 'sd-world', 'sd-map', 'sd-river', 'sd-road', 'sd-lake', 'sd-up'])
+    assert.ok(empty[1].includes(`class="${cls}`), cls);
+  assert.ok((empty[1].match(/class="sd-stand"/g) || []).length >= 4, 'talhões no mapa');
+  assert.match(empty[1], /<g class="sd-packet">[\s\S]*?<text[^>]*>011101<\/text>/, 'pacote mostra 011101');
+  // zoom enquadra o monitor inteiro (140 x 92) dentro da vista 400 x 260
+  const z = +css.match(/46%, 74% \{ transform: translate\([^)]*\) scale\(([\d.]+)\)/)[1];
+  assert.ok(140 * z <= 400 && 92 * z <= 260, `monitor cabe no zoom (scale ${z})`);
+  assert.match(css, /--sd-t: 10s/, 'loop de ~10 s');
+  for (const k of ['sd-drop', 'sd-zoom', 'sd-map', 'sd-up']) {
+    assert.match(css, new RegExp(`@keyframes ${k} \\{`), k);
+    assert.match(css, new RegExp(`animation: ${k} var\\(--sd-t\\)[^;]*infinite`), `${k} em loop`);
+  }
+  assert.match(css, /prefers-reduced-motion: reduce[\s\S]*?\.sd-anim \* \{ animation: none !important; \}/, 'respeita redução de movimento');
+  assert.match(css, /\.sd-anim \{[^}]*overflow: hidden/, 'zoom recortado na área do desenho');
+  assert.match(app, /\$\('emptyState'\)\.classList\.toggle\('hidden', show\)/, 'some quando a prévia aparece');
+});
