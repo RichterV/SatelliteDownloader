@@ -8,6 +8,7 @@ const { ROOT } = require('./helpers/core');
 
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const app = fs.readFileSync(path.join(ROOT, 'js', 'app.js'), 'utf8');
+const css = fs.readFileSync(path.join(ROOT, 'css', 'style.css'), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
 
 test('todo id usado em app.js existe no index.html', () => {
@@ -52,4 +53,13 @@ test('card de preview (Open Graph) aponta para imagem existente', () => {
   const og = html.match(/property="og:image" content="([^"]+)"/)?.[1];
   assert.ok(og && og.startsWith('https://'), 'og:image precisa de URL absoluta');
   assert.ok(fs.existsSync(path.join(ROOT, path.basename(og))));
+});
+
+test('layout cabe na tela: formulário limitado à altura da janela e lista de satélites rolável', () => {
+  const rule = sel => (css.match(new RegExp('^' + sel.replace(/[.]/g, '\\.') + String.raw` \{([^}]*)\}`, 'm')) || [])[1] || '';
+  assert.match(rule('.form'), /max-height:\s*calc\(100vh/);
+  assert.match(rule('.sensor-list'), /overflow-y:\s*auto/);
+  assert.match(css, /\.form > \.sensor-field \{[^}]*flex-shrink:\s*1/);
+  assert.match(html, /class="field sensor-field"[\s\S]*id="sensorOther"/);
+  assert.match(app, /maxH = previewMaxHeight\(\)/, 'prévia dimensionada para não rolar a página');
 });

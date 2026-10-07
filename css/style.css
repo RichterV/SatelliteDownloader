@@ -39,7 +39,11 @@ body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; back
 @media (max-width: 860px) { .layout { grid-template-columns: 1fr; padding: 16px; } }
 
 /* ---------- formulário ---------- */
-.form { padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+/* o formulário cabe na tela (topo 54px + margens 40px + rodapé ~52px); a lista de satélites usa o espaço que sobrar */
+.form { padding: 20px; display: flex; flex-direction: column; gap: 18px; max-height: calc(100vh - 146px); overflow-y: auto; }
+.form > * { flex-shrink: 0; }
+.form > .sensor-field { flex-shrink: 1; min-height: 0; }
+@media (max-width: 860px) { .form { max-height: none; } }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .label { font-size: .8rem; font-weight: 600; color: var(--muted); }
 input[type=number], input[type=date], select {
@@ -147,7 +151,9 @@ input:disabled { opacity: .5; }
 .sensor-info { font-size: .8rem; color: var(--muted); line-height: 1.45; }
 .sc-meta { display: inline-block; padding: 0 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
   font-size: .72rem; font-weight: 600; white-space: nowrap; }
-.sensor-list { display: flex; flex-direction: column; gap: 6px; }
+.sensor-list { display: flex; flex-direction: column; gap: 6px; min-height: 120px; overflow-y: auto; padding-right: 4px;
+  overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.sensor-card { flex: none; }
 .sensor-card { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--border);
   border-radius: 8px; background: var(--field); cursor: pointer; transition: border-color .15s, background .15s; }
 .sensor-card:hover { border-color: var(--muted); }

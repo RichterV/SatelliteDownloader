@@ -21,6 +21,8 @@ function currentSensor() {
 function onSensorChange() {
   const other = document.querySelector('input[name=sensor]:checked').value === 'other';
   $('sensorOther').classList.toggle('hidden', !other);
+  // mantém o cartão escolhido visível dentro da lista rolável
+  if (other) document.querySelector('input[name=sensorOther]:checked').closest('.sensor-card').scrollIntoView({ block: 'nearest' });
   const s = Core.SENSORS[currentSensor()];
   $('sensorInfo').classList.toggle('hidden', other);
   $('sensorInfo').innerHTML = `<span class="sc-meta">${sensorMeta(s)}</span> ${s.about}`;
@@ -161,6 +163,15 @@ function availableComposites() {
   return Core.SENSORS[state.params.sensor].composites.filter(c => c.b.every(n => img.bands.some(b => b.name === n)));
 }
 
+// Altura disponível para a prévia sem rolar a página: tela menos tudo o que não é o canvas
+// (cabeçalho, dados da imagem, rodapé do cartão, resumo de "Cenas avaliadas" fechado e rodapé da página).
+function previewMaxHeight() {
+  const cv = $('view'), panel = $('resultPanel').getBoundingClientRect();
+  const below = $('candPanel').classList.contains('hidden') ? 0 : 20 + 50; // gap + resumo fechado
+  const used = panel.bottom + window.scrollY - cv.height + below + 20 + document.querySelector('footer').offsetHeight;
+  return Math.max(240, window.innerHeight - used);
+}
+
 function draw() {
   const img = state.img; if (!img || $('resultPanel').classList.contains('hidden')) return;
   const cp = availableComposites()[$('composite').value || 0];
@@ -178,7 +189,7 @@ function draw() {
   }
   octx.putImageData(id, 0, 0);
   // ajusta à largura disponível e a ~70% da altura da janela
-  const maxW = $('viewWrap').clientWidth || 900, maxH = Math.max(320, window.innerHeight * 0.7);
+  const maxW = $('viewWrap').clientWidth || 900, maxH = previewMaxHeight();
   const k = Core.previewScale(img.W, img.H, maxW, maxH);
   const cv = $('view'); cv.width = Math.round(img.W * k); cv.height = Math.round(img.H * k);
   const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = k < 1;
