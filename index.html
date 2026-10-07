@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Satellite Downloader</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/shpjs@4.0.4/dist/shp.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 2 4 14h5l-3 6h12l-3-6h5z"/></svg>
+    <span>Satellite Downloader</span>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="card form">
+    <div class="field">
+      <span class="label">Área</span>
+      <label class="drop" id="drop">
+        <input type="file" id="file" multiple accept=".geojson,.json,.zip,.shp,.dbf,.prj,.cpg,.shx">
+        <span class="drop-main" id="dropMain">Arraste ou clique para escolher</span>
+        <span class="drop-sub" id="fileInfo">GeoJSON, shapefile .zip ou .shp + .dbf + .prj</span>
+      </label>
+    </div>
+
+    <div class="field">
+      <span class="label">Satélite</span>
+      <div class="segmented">
+        <label><input type="radio" name="sensor" value="sentinel2" checked><span>Sentinel-2</span></label>
+        <label><input type="radio" name="sensor" value="landsat"><span>Landsat 8/9</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="label" for="date">Data de referência</label>
+      <input type="date" id="date">
+    </div>
+
+    <details class="advanced">
+      <summary>Avançado</summary>
+      <div class="adv-grid">
+        <div>
+          <label class="label" for="buffer">Buffer (m)</label>
+          <input type="number" id="buffer" value="500" min="0" step="50">
+        </div>
+        <div>
+          <label class="label" for="window">Janela (± dias)</label>
+          <input type="number" id="window" value="60" min="1" max="365">
+        </div>
+        <div>
+          <label class="label" for="tol">Nuvem aceita (%)</label>
+          <input type="number" id="tol" value="0" min="0" max="100" step="0.5">
+        </div>
+      </div>
+    </details>
+
+    <button id="btnSearch" class="primary block" disabled>Buscar imagem</button>
+    <div id="status" class="status"></div>
+  </aside>
+
+  <section class="content">
+    <div class="card empty" id="emptyState">
+      <svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M3 6h18v12H3zM3 15l5-5 4 4 3-3 6 6"/></svg>
+      <p>Carregue a área e busque uma imagem.</p>
+    </div>
+
+    <div class="card hidden" id="resultPanel">
+      <div class="result-head">
+        <dl class="stats" id="meta"></dl>
+        <div class="result-actions">
+          <button id="btnNext" class="ghost">Próxima imagem</button>
+          <button id="btnDownload" class="primary">Baixar .zip</button>
+        </div>
+      </div>
+      <div class="viewer" id="viewWrap">
+        <canvas id="view"></canvas>
+        <div class="viewer-tools">
+          <select id="composite" aria-label="Composição"></select>
+          <label class="toggle"><input type="checkbox" id="showPoly" checked> Talhões</label>
+        </div>
+      </div>
+      <div class="result-foot">
+        <span id="dlInfo"></span>
+        <details>
+          <summary id="bandSummary">Bandas</summary>
+          <div class="bandlist" id="bandlist"></div>
+        </details>
+      </div>
+    </div>
+
+    <details class="card hidden" id="candPanel">
+      <summary id="candSummary">Cenas avaliadas</summary>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Data</th><th>Δ dias</th><th>Satélite</th><th>Nuvem cena</th><th>Nuvem talhões</th><th>Status</th></tr></thead>
+          <tbody id="candBody"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+</main>
+
+<footer>Desenvolvido por Vinicius Richter · <a href="mailto:vinicius.richter@treevia.com.br">vinicius.richter@treevia.com.br</a></footer>
+
+<script src="js/core.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

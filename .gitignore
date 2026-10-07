@@ -1,0 +1,27 @@
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Claude Code (configurações locais)
+.claude/settings.local.json
+
+# Node (caso usem ferramentas locais de teste)
+node_modules/
+package-lock.json
+
+# Saídas geradas pelo app e dados de teste
+*.tif
+*.tiff
+*.zip
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
