@@ -1,6 +1,6 @@
 // ======================= Interface =======================
 const $ = id => document.getElementById(id);
-const state = { geo: null, fileBase: 'talhoes', cands: [], idx: -1, img: null, run: 0, params: null };
+const state = { geo: null, fileBase: 'talhoes', cands: [], idx: -1, img: null, run: 0, params: null, sel: null };
 
 $('date').value = Core.isoDay(new Date());
 
@@ -98,7 +98,7 @@ async function runSearch() {
   const buffer = Math.max(0, parseFloat($('buffer').value) || 0), tol = Math.max(0, parseFloat($('tol').value) || 0);
   if (!day) return setStatus('Informe a data.', 'err');
   state.params = { sensor, day, win, buffer, tol };
-  showResult(false); $('candPanel').classList.add('hidden');
+  showResult(false); $('candPanel').classList.add('hidden'); state.sel = null; $('pixelPop').classList.add('hidden');
   state.cands = []; state.idx = -1;
   try {
     setStatus('Buscando cenas…', 'busy');
@@ -138,7 +138,7 @@ async function showCandidate(c, run) {
     const img = await Core.loadImage(c, sensor, state.geo, state.params.buffer,
       (k, n) => setStatus(`Baixando bandas de ${fmtDate(c.day)}… ${k}/${n}`, 'busy'));
     if (run !== state.run) return;
-    state.img = img;
+    state.img = img; state.sel = null; $('pixelPop').classList.add('hidden');
     const s = Core.SENSORS[sensor];
     $('meta').innerHTML = [
       ...(s.static ? [] : [['Data', fmtDate(c.day)], ['Diferença', fmtDelta(c.delta)]]), ['Satélite', c.satellite],
@@ -202,7 +202,71 @@ function draw() {
       ctx.stroke();
     }
   }
+  drawSelection();
 }
+
+// ---------- inspeção de pixel ----------
+// Clique na prévia: borda vermelha no pixel e balão com o valor de cada banda
+const fmtNum = v => Number.isInteger(v) ? String(v) : (Math.abs(v) >= 1000 ? v.toFixed(1) : v.toPrecision(4)).replace('.', ',');
+
+function drawSelection() {
+  const img = state.img, sel = state.sel, cv = $('view');
+  if (!img || !sel) return;
+  const sx = cv.width / img.W, sy = cv.height / img.H;
+  // pixels menores que a tela (imagem reduzida) ganham uma marca mínima de 8 px
+  const w = Math.max(sx, 8), h = Math.max(sy, 8);
+  const x = (sel.c + 0.5) * sx - w / 2, y = (sel.r + 0.5) * sy - h / 2;
+  const ctx = cv.getContext('2d');
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(0, 0, 0, .6)'; ctx.strokeRect(x - 1, y - 1, w + 2, h + 2);
+  ctx.strokeStyle = '#ff2d2d'; ctx.strokeRect(x, y, w, h);
+  placePopup();
+}
+
+function showPixel(c, r) {
+  const img = state.img;
+  state.sel = { c, r };
+  const [lon, lat] = Core.pixelLonLat(img, c, r);
+  const rows = Core.pixelValues(img, c, r).map(v =>
+    `<tr><td>${v.name}</td><td>${v.nodata ? '<span class="pp-nd">sem dado</span>' : fmtNum(v.raw)}</td>` +
+    `<td>${v.value === null ? '' : fmtNum(v.value) + (v.unit && v.unit.length <= 3 ? ' ' + v.unit : '')}</td></tr>`).join('');
+  const conv = img.bands.some(b => b.scale !== 1 || b.offset !== 0);
+  $('pixelPop').innerHTML =
+    `<div class="pp-head"><span>Linha ${r}, coluna ${c}<small>${lat.toFixed(6)}, ${lon.toFixed(6)}</small></span>` +
+    `<button class="pp-close" aria-label="Fechar">×</button></div>` +
+    `<table><thead><tr><th>Banda</th><th>Valor</th><th>${conv ? 'Convertido' : ''}</th></tr></thead><tbody>${rows}</tbody></table>`;
+  $('pixelPop').classList.remove('hidden');
+  draw();
+}
+
+function closePixel() {
+  if (!state.sel) return;
+  state.sel = null; $('pixelPop').classList.add('hidden'); draw();
+}
+
+// Posiciona o balão ao lado do pixel, sem sair da área da prévia
+function placePopup() {
+  const pop = $('pixelPop'), cv = $('view'), wrap = $('viewWrap'), img = state.img, sel = state.sel;
+  if (!sel || pop.classList.contains('hidden')) return;
+  const sx = cv.width / img.W, sy = cv.height / img.H;
+  const px = cv.offsetLeft + (sel.c + 0.5) * sx, py = cv.offsetTop + (sel.r + 0.5) * sy;
+  const gap = Math.max(sx, sy) / 2 + 10, W = wrap.clientWidth, H = wrap.clientHeight;
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  let left = px + gap; if (left + pw > W - 8) left = px - gap - pw;
+  let top = py - ph / 2;
+  pop.style.left = Math.max(8, Math.min(left, W - pw - 8)) + 'px';
+  pop.style.top = Math.max(8, Math.min(top, H - ph - 8)) + 'px';
+}
+
+$('view').addEventListener('click', e => {
+  const img = state.img, cv = $('view'); if (!img) return;
+  const rect = cv.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * cv.width / rect.width, y = (e.clientY - rect.top) * cv.height / rect.height;
+  const p = Core.canvasToPixel(x, y, cv.width / img.W, cv.height / img.H, img.W, img.H);
+  if (p) showPixel(p.c, p.r);
+});
+$('pixelPop').addEventListener('click', e => { if (e.target.closest('.pp-close')) closePixel(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePixel(); });
 
 // ---------- eventos ----------
 $('btnSearch').addEventListener('click', runSearch);

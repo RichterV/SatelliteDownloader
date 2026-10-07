@@ -694,6 +694,28 @@ function percentiles(data, lo, hi, nodata = 0) {
   return [a, b > a ? b : a + 1];
 }
 
+// ---------- inspeção de pixel ----------
+// Posição (x, y) no canvas da prévia => pixel (c, r) da imagem; null se fora. sx/sy = px de canvas por pixel da imagem.
+function canvasToPixel(x, y, sx, sy, W, H) {
+  const c = Math.floor(x / sx), r = Math.floor(y / sy);
+  return c >= 0 && c < W && r >= 0 && r < H ? { c, r } : null;
+}
+// Valor de cada banda no pixel: armazenado (raw) e convertido (raw * escala + offset), ou nodata
+function pixelValues(img, c, r) {
+  const i = r * img.W + c;
+  return img.bands.map(b => {
+    const raw = b.data[i];
+    const nodata = raw === img.nodata || Number.isNaN(raw);
+    const converted = !nodata && (b.scale !== 1 || b.offset !== 0);
+    return { name: b.name, code: b.code, unit: b.unit || '', raw, nodata, value: converted ? raw * b.scale + b.offset : null };
+  });
+}
+// Centro do pixel em lon/lat (WGS84)
+function pixelLonLat(img, c, r) {
+  const x = img.X0 + (c + 0.5) * img.res, y = img.Y0 - (r + 0.5) * (img.resY || img.res);
+  return proj4(ensureProj(img.epsg), 'EPSG:4326', [x, y]);
+}
+
 // ---------- zip ----------
 function zipFile(name, buf) {
   return new Promise((resolve, reject) =>
@@ -702,7 +724,7 @@ function zipFile(name, buf) {
 
 globalThis.Core = {
   SENSORS, MODIS_SINU, readVectorFiles, zipFile, parseGeoJSON, stacSearch, searchRange, orderCandidates, checkCandidate, loadImage,
-  buildGeoTIFF, percentiles, previewScale, addDays, isoDay, crsLabel, isGeographic,
+  buildGeoTIFF, percentiles, previewScale, canvasToPixel, pixelValues, pixelLonLat, addDays, isoDay, crsLabel, isGeographic,
   // expostos para os testes
   ensureProj, projectPolys, pointInRing, footprintContains, rasterize, signHref, assetOf, gridOf, epsgOf, itemDates,
 };

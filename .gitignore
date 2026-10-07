@@ -31,3 +31,6 @@ plantio_teste.json
 
 # Contexto local do Claude Code
 CLAUDE.md
+
+# Documentação técnica (MkDocs), local
+docs/
