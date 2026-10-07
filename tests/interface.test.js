@@ -132,11 +132,73 @@ test('tela vazia: satélite entra orbitando por trás da Terra antes de enviar o
   assert.ok(firstDrop > arrive, `pacote (${firstDrop}%) depois da chegada (${arrive}%)`);
 });
 
-test('tela vazia: sem linha de órbita e o satélite sai pela esquerda (continua a órbita)', () => {
+test('tela vazia: sem linha de órbita; satélite segue a órbita para a direita e some atrás da Terra', () => {
   assert.doesNotMatch(html, /class="sd-orbit"/, 'linha tracejada removida');
-  const body = css.match(/@keyframes sd-orbit-front \{([\s\S]*?)\n\}/)[1];
-  const last = [...body.matchAll(/translate\((-?[\d.]+)px, (-?[\d.]+)px\)[^;]*scale\(([\d.]+)\); opacity: 1/g)].at(-1);
-  const x = 95 + +last[1], half = 70 * +last[3]; // centro do satélite e meia largura (painéis)
-  assert.ok(x + half < 0, `sai inteiro pela esquerda antes de sumir (borda direita em ${x + half})`);
-  assert.ok(Math.abs(+last[2]) < 60, 'sai pela lateral, não pelo alto');
+  const rows = k => [...css.match(new RegExp(`@keyframes ${k} \\{([\\s\\S]*?)\\n\\}`))[1]
+    .matchAll(/([\d.]+)%[^{]*\{ transform: translate\((-?[\d.]+)px, (-?[\d.]+)px\) scale\(([\d.]+)\); opacity: ([\d.]+)/g)]
+    .map(m => ({ p: +m[1], x: 95 + +m[2], y: 60 + +m[3], s: +m[4], o: +m[5] }));
+  const front = rows('sd-orbit-front'), back = rows('sd-orbit-back');
+  const lastFront = front.filter(r => r.o === 1).at(-1);
+  const backAgain = back.filter(r => r.o === 1 && r.p > 50);
+  assert.ok(backAgain.length >= 3, 'no fim do ciclo volta a cópia de trás');
+  // troca no mesmo lugar, com o satélite inteiro fora do disco, à direita
+  assert.ok(Math.abs(backAgain[0].x - lastFront.x) < 1 && Math.abs(backAgain[0].y - lastFront.y) < 1, 'troca sem salto');
+  const edge = y => 200 + Math.sqrt(128 ** 2 - (y - 130) ** 2);
+  for (const dy of [-25, 0, 25]) assert.ok(lastFront.x - 70 * lastFront.s > edge(lastFront.y + dy), 'troca fora do disco');
+  assert.ok(lastFront.x > 300, 'sai pela direita');
+  // termina escondido atrás do globo
+  const end = backAgain.at(-1);
+  assert.ok(Math.hypot(end.x - 200, end.y - 130) + 70 * end.s < 128 + 15, 'termina atrás da Terra');
+});
+
+test('tela vazia: computador mostra a plataforma Treevia até o pacote chegar; depois o mapa', () => {
+  const svg = html.match(/<svg class="sd-anim"[\s\S]*?<\/svg>/)[0];
+  const ui = svg.match(/<g class="sd-ui"[^>]*>([\s\S]*?)\n {10}<\/g>/)[1];
+  for (const cls of ['sd-ui-top', 'sd-ui-btn', 'sd-ui-search', 'sd-ui-farm', 'sd-ui-ocean', 'sd-ui-pin', 'sd-ui-cluster'])
+    assert.ok(ui.includes(`class="${cls}"`), cls);
+  assert.equal((ui.match(/class="sd-ui-num"/g) || []).length, 6 + 3, '6 indicadores + 3 fazendas');
+  assert.match(ui, /href="logo\.png"/, 'logo no menu');
+  assert.match(svg, /<g class="sd-ui" clip-path="url\(#sd-screen-clip\)">/, 'recortada nos cantos arredondados da tela');
+  const uiHide = +css.match(/@keyframes sd-ui \{[^}]*\}\s*([\d.]+)%/)[1];
+  const hit = +css.match(/@keyframes sd-flash \{[^}]*\}\s*([\d.]+)%/)[1];
+  assert.ok(Math.abs(uiHide - hit) < 1.5, `tela da plataforma some quando o pacote bate (${uiHide}% x ${hit}%)`);
+});
+
+test('tela vazia: logo da Treevia só na tela verde-escura (ao receber o pacote e enquanto o dado volta), nunca sobre o mapa', () => {
+  const svg = html.match(/<svg class="sd-anim"[\s\S]*?<\/svg>/)[0];
+  const map = svg.match(/<g class="sd-map"[\s\S]*?<rect class="sd-scan"/)[0];
+  assert.doesNotMatch(map, /logo\.png|sd-splash/, 'sem logo no mapa');
+  assert.match(svg, /<g class="sd-idle-logo">[\s\S]*?href="logo\.png"/, 'logo na tela verde-escura');
+  // janelas em que o logo está visível (opacity > 0) a partir das keyframes
+  const kf = name => {
+    // corpo do bloco contando chaves (há @keyframes de uma linha e de várias)
+    let i = css.indexOf('@keyframes ' + name + ' {') + ('@keyframes ' + name + ' {').length, d = 1, j = i;
+    while (d) { if (css[j] === '{') d++; else if (css[j] === '}') d--; j++; }
+    const body = css.slice(i, j - 1);
+    return [...body.matchAll(/([\d.%,\s]+)\{[^}]*?opacity: ([\d.]+)/g)]
+      .flatMap(m => m[1].split(',').map(t => [parseFloat(t), +m[2]])).filter(([p]) => !isNaN(p)).sort((a, b) => a[0] - b[0]);
+  };
+  const at = (frames, t) => { // interpolação linear da opacidade
+    for (let k = 1; k < frames.length; k++) if (t <= frames[k][0]) {
+      const [p0, o0] = frames[k - 1], [p1, o1] = frames[k];
+      return p1 === p0 ? o1 : o0 + (o1 - o0) * (t - p0) / (p1 - p0);
+    }
+    return frames.at(-1)[1];
+  };
+  const logo = kf('sd-idle-logo'), mapOp = kf('sd-map'), ui = kf('sd-ui');
+  let seen = 0;
+  for (let t = 0; t <= 100; t += 0.1) {
+    const l = at(logo, t);
+    if (l > 0.02) {
+      seen++;
+      assert.ok(at(mapOp, t) < 0.02, `logo junto do mapa em ${t.toFixed(1)}%`);
+      assert.ok(at(ui, t) < 0.02, `logo junto da tela da plataforma em ${t.toFixed(1)}%`);
+    }
+  }
+  assert.ok(seen > 100, 'logo aparece nas duas telas verdes');
+  // aparece ao receber o pacote (antes do mapa) e na volta (depois do mapa)
+  assert.ok(at(logo, 43) > 0.9 && at(logo, 85) > 0.9, 'logo nas duas telas verdes');
+  // pin assenta antes de o mapa começar a sumir
+  const pinRest = +css.match(/@keyframes sd-pin \{[\s\S]*?\n {2}([\d.]+)%, 92\.31%, 100%/)[1];
+  assert.ok(pinRest < 73.85, `pin assenta (${pinRest}%) antes de o mapa sumir`);
 });

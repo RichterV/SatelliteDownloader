@@ -236,13 +236,29 @@ input:disabled { opacity: .5; }
 .sd-led { fill: #5cbf83; }
 .sd-pc-stand { fill: #c7d1ca; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; }
 .sd-screen { fill: #17301f; stroke: var(--ink); stroke-width: 1.5; }
-.sd-dots { opacity: 0; animation: sd-dots var(--sd-t) linear infinite; }
-.sd-dots circle { fill: #5cbf83; animation: sd-dot .9s ease-in-out infinite; transform-origin: center; }
+/* tela da plataforma (Visão Geral, caricata) até o pacote chegar */
+.sd-ui { animation: sd-ui var(--sd-t) linear infinite; }
+.sd-ui-bg { fill: #f4f7f5; } .sd-ui-top { fill: #fff; }
+.sd-ui-txt { fill: #b9c2bd; } .sd-ui-pill { fill: #9fd06a; } .sd-ui-num, .sd-ui-title { fill: #1f3b63; }
+.sd-ui-icon { fill: none; stroke: #1f3b63; stroke-width: .6; } .sd-ui-avatar { fill: #dfe4e1; }
+.sd-ui-btn { fill: #8dc63f; }
+.sd-ui-card { fill: #fff; stroke: #dbe2dd; stroke-width: .4; }
+.sd-ui-search { fill: #fff; stroke: #9ac57a; stroke-width: .5; } .sd-ui-lupa { fill: none; stroke: #6aae3a; stroke-width: .5; }
+.sd-ui-farm { fill: #cfdbe3; stroke: #8fa3b3; stroke-width: .4; stroke-linejoin: round; }
+.sd-ui-ocean { fill: #1d3557; }
+.sd-ui-land { fill: #5f8f4e; } .sd-ui-desert { fill: #d8b77f; } .sd-ui-ice { fill: #eef3f6; }
+.sd-ui-pin { fill: #e5484d; stroke: #7a1d20; stroke-width: .3; }
+.sd-ui-cluster circle { fill: #2b3fc0; stroke: #8b96f3; stroke-width: .8; }
+.sd-ui-cluster text { font: 700 2.8px system-ui, sans-serif; fill: #fff; text-anchor: middle; }
+.sd-ui-cluster { transform-origin: 290.5px 182.5px; animation: sd-cluster 1.6s ease-in-out infinite; }
+@keyframes sd-cluster { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
 .sd-world { transform-origin: 305px 168px; animation: sd-zoom var(--sd-t) ease-in-out infinite; }
 
 /* mapa (estado sem animação = mapa completo, usado em prefers-reduced-motion) */
 .sd-map { opacity: 1; animation: sd-map var(--sd-t) linear infinite; }
 .sd-land { fill: #dcefc9; }
+.sd-idle-logo { opacity: 0; transform-origin: 285px 164px; animation: sd-idle-logo var(--sd-t) ease-out infinite; }
+.sd-idle-logo circle { fill: #eef3ef; opacity: .9; }
 .sd-contour { fill: none; stroke: #bddca8; stroke-width: .7; }
 .sd-st1 { fill: #8fd3a5; } .sd-st2 { fill: #5cbf83; } .sd-st3 { fill: #3e9b63; }
 .sd-rows { fill: url(#sd-rows); stroke: #e0a800; stroke-width: 1; stroke-linejoin: round; }
@@ -292,7 +308,14 @@ input:disabled { opacity: .5; }
   6.63% { transform: translate(-62.64px, 44.51px) scale(0.82); opacity: 1; }
   7.74% { transform: translate(-84.27px, 47.2px) scale(0.85); opacity: 1; }
   8.85% { transform: translate(-92px, 48px) scale(0.86); opacity: 1; }
-  8.86%, 100% { transform: translate(-92px, 48px) scale(.86); opacity: 0; }
+  8.86%, 96.6% { transform: translate(292px, -4px) scale(.9); opacity: 0; }
+  96.61% { transform: translate(292px, -4px) scale(0.9); opacity: 1; }
+  97.17% { transform: translate(286.26px, -0.93px) scale(0.88); opacity: 1; }
+  97.74% { transform: translate(269.38px, 6px) scale(0.83); opacity: 1; }
+  98.31% { transform: translate(243.5px, 12px) scale(0.76); opacity: 1; }
+  98.87% { transform: translate(214.38px, 14px) scale(0.69); opacity: 1; }
+  99.44% { transform: translate(190.99px, 12.93px) scale(0.64); opacity: 1; }
+  100% { transform: translate(182px, 12px) scale(0.62); opacity: 1; }
 }
 @keyframes sd-orbit-front {
   0%, 8.85% { transform: translate(-92px, 48px) scale(.86); opacity: 0; }
@@ -306,15 +329,17 @@ input:disabled { opacity: .5; }
   14.57% { transform: translate(-5.26px, -0.66px) scale(0.99); opacity: 1; }
   15.38% { transform: translate(0px, 0px) scale(1); opacity: 1; }
   92.31% { transform: translate(0px, 0px) scale(1); opacity: 1; }
-  93.21% { transform: translate(-5.47px, -2.02px) scale(1); opacity: 1; }
-  94.11% { transform: translate(-22.54px, -6.61px) scale(0.99); opacity: 1; }
-  95.01% { transform: translate(-52.26px, -10.23px) scale(0.97); opacity: 1; }
-  95.91% { transform: translate(-93.75px, -9.5px) scale(0.95); opacity: 1; }
-  96.8% { transform: translate(-142.19px, -3.35px) scale(0.93); opacity: 1; }
-  97.7% { transform: translate(-188.71px, 6.11px) scale(0.91); opacity: 1; }
-  98.6% { transform: translate(-222.58px, 14.61px) scale(0.9); opacity: 1; }
-  99.5% { transform: translate(-235px, 18px) scale(0.9); opacity: 1; }
-  100% { transform: translate(-235px, 18px) scale(.9); opacity: 0; }
+  92.74% { transform: translate(7.34px, -2.2px) scale(1); opacity: 1; }
+  93.17% { transform: translate(28.57px, -7.98px) scale(0.99); opacity: 1; }
+  93.6% { transform: translate(61.49px, -15.22px) scale(0.98); opacity: 1; }
+  94.03% { transform: translate(102.69px, -21.28px) scale(0.97); opacity: 1; }
+  94.45% { transform: translate(148px, -24px) scale(0.95); opacity: 1; }
+  94.88% { transform: translate(192.93px, -22.52px) scale(0.93); opacity: 1; }
+  95.31% { transform: translate(233.13px, -17.57px) scale(0.92); opacity: 1; }
+  95.74% { transform: translate(264.81px, -11.22px) scale(0.91); opacity: 1; }
+  96.17% { transform: translate(285.05px, -6px) scale(0.9); opacity: 1; }
+  96.6% { transform: translate(292px, -4px) scale(0.9); opacity: 1; }
+  96.61%, 100% { transform: translate(292px, -4px) scale(.9); opacity: 0; }
 }
 @keyframes sd-bob { to { transform: translateY(-6px); } }
 @keyframes sd-look {
@@ -337,7 +362,7 @@ input:disabled { opacity: .5; }
 @keyframes sd-blink { 0% { opacity: 1; } 50% { opacity: .25; } }
 @keyframes sd-twinkle { 0%, 100% { opacity: .35; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.1); } }
 @keyframes sd-dot { 0%, 100% { transform: scale(.6); opacity: .5; } 50% { transform: scale(1.15); opacity: 1; } }
-@keyframes sd-dots { 0%, 15.38%, 38.46% { opacity: 1; } 39.23%, 92.31%, 100% { opacity: 0; } }
+@keyframes sd-ui { 0%, 15.38%, 38.46% { opacity: 1; } 39.23%, 95% { opacity: 0; } 100% { opacity: 1; } }
 @keyframes sd-drop {
   0%, 15.38%, 20% { transform: translate(106.1px, 92.4px) rotate(0deg) scale(0); opacity: 0; }
   22.31% { transform: translate(108.1px, 100.4px) rotate(0deg) scale(1.2); opacity: 1; }
@@ -362,6 +387,18 @@ input:disabled { opacity: .5; }
   0%, 15.38%, 43.08% { transform: none; }
   50.77%, 72.31% { transform: translate(-105px, -38px) scale(2.55); }
   80%, 92.31%, 100% { transform: none; }
+}
+@keyframes sd-idle-logo {
+  /* tela verde-escura depois que o pacote chega: some antes de o mapa começar */
+  0%, 39.3% { opacity: 0; transform: scale(.85); }
+  40.8% { opacity: 1; transform: scale(1.04); }
+  41.6%, 45% { opacity: 1; transform: scale(1); }
+  45.38%, 77% { opacity: 0; transform: scale(1); }
+  /* tela verde-escura enquanto o dado volta ao satélite: só depois que o mapa sumiu; sai quando a plataforma volta */
+  77.1% { opacity: 0; transform: scale(.85); }
+  77.9% { opacity: 1; transform: scale(1.04); }
+  78.7%, 94.4% { opacity: 1; transform: scale(1); }
+  95%, 100% { opacity: 0; transform: scale(1); }
 }
 @keyframes sd-map { 0%, 15.38%, 45.38% { opacity: 0; } 48.46%, 73.85% { opacity: 1; } 76.92%, 92.31%, 100% { opacity: 0; } }
 @keyframes sd-pop { 0%, 15.38%, 50.77% { transform: scale(0); } 54.62% { transform: scale(1.15); } 56.15%, 92.31%, 100% { transform: scale(1); } }

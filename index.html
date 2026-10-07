@@ -4,8 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Satellite Downloader</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" href="logo.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="description" content="Download de imagens de satélite Sentinel-2 e Landsat 8/9 para talhões.">
 <meta property="og:type" content="website">
@@ -187,10 +186,31 @@
           <image class="sd-logo" href="logo.png" x="278.3" y="204" width="13.4" height="11" preserveAspectRatio="xMidYMid meet"/>
           <circle class="sd-led" cx="343" cy="210" r="1.6"/>
           <rect class="sd-screen" x="224" y="126" width="122" height="76" rx="4"/>
-          <g class="sd-dots">
-            <circle style="animation-delay:0s" cx="271" cy="164" r="3.5"/>
-            <circle style="animation-delay:.2s" cx="285" cy="164" r="3.5"/>
-            <circle style="animation-delay:.4s" cx="299" cy="164" r="3.5"/>
+          <!-- tela da plataforma Treevia (Visão Geral) antes de o pacote chegar -->
+          <g class="sd-ui" clip-path="url(#sd-screen-clip)">
+            <rect class="sd-ui-bg" x="224" y="126" width="122" height="76" rx="4"/>
+            <rect class="sd-ui-top" x="224" y="126" width="122" height="6.5"/>
+            <image href="logo.png" x="225.6" y="127.1" width="4.8" height="4" preserveAspectRatio="xMidYMid meet"/>
+            <rect class="sd-ui-txt" x="232" y="128.4" width="6" height="1.5" rx=".75"/><rect class="sd-ui-txt" x="239.5" y="128.4" width="8" height="1.5" rx=".75"/><rect class="sd-ui-txt" x="249" y="128.4" width="9" height="1.5" rx=".75"/><rect class="sd-ui-txt" x="259.5" y="128.4" width="11" height="1.5" rx=".75"/><rect class="sd-ui-txt" x="272" y="128.4" width="7" height="1.5" rx=".75"/><rect class="sd-ui-pill" x="280" y="128.2" width="5" height="1.9" rx=".95"/><rect class="sd-ui-txt" x="286" y="128.4" width="8" height="1.5" rx=".75"/><rect class="sd-ui-txt" x="295.5" y="128.4" width="8" height="1.5" rx=".75"/><rect class="sd-ui-pill" x="304.5" y="128.2" width="5" height="1.9" rx=".95"/><rect class="sd-ui-txt" x="310.5" y="128.4" width="9" height="1.5" rx=".75"/>
+            <circle class="sd-ui-icon" cx="331" cy="129.2" r="1.5"/><circle class="sd-ui-avatar" cx="338.5" cy="129.2" r="2"/>
+            <rect class="sd-ui-title" x="228" y="134.6" width="20" height="2.4" rx=".6"/>
+            <rect class="sd-ui-txt" x="228" y="138.3" width="30" height="1.1" rx=".55"/>
+            <rect class="sd-ui-btn" x="322" y="134.2" width="20" height="4.2" rx="1"/>
+            <rect class="sd-ui-card" x="228" y="141.5" width="18" height="8" rx="1"/><rect class="sd-ui-num" x="233" y="143.2" width="8" height="2.3" rx=".5"/><rect class="sd-ui-txt" x="231" y="146.6" width="12" height="1" rx=".5"/><rect class="sd-ui-card" x="247.2" y="141.5" width="18" height="8" rx="1"/><rect class="sd-ui-num" x="252.2" y="143.2" width="8" height="2.3" rx=".5"/><rect class="sd-ui-txt" x="250.2" y="146.6" width="12" height="1" rx=".5"/><rect class="sd-ui-card" x="266.4" y="141.5" width="18" height="8" rx="1"/><rect class="sd-ui-num" x="271.4" y="143.2" width="8" height="2.3" rx=".5"/><rect class="sd-ui-txt" x="269.4" y="146.6" width="12" height="1" rx=".5"/><rect class="sd-ui-card" x="285.6" y="141.5" width="18" height="8" rx="1"/><rect class="sd-ui-num" x="290.6" y="143.2" width="8" height="2.3" rx=".5"/><rect class="sd-ui-txt" x="288.6" y="146.6" width="12" height="1" rx=".5"/><rect class="sd-ui-card" x="304.8" y="141.5" width="18" height="8" rx="1"/><rect class="sd-ui-num" x="309.8" y="143.2" width="8" height="2.3" rx=".5"/><rect class="sd-ui-txt" x="307.8" y="146.6" width="12" height="1" rx=".5"/><rect class="sd-ui-card" x="324" y="141.5" width="18" height="8" rx="1"/><rect class="sd-ui-num" x="329" y="143.2" width="8" height="2.3" rx=".5"/><rect class="sd-ui-txt" x="327" y="146.6" width="12" height="1" rx=".5"/>
+            <rect class="sd-ui-card" x="228" y="151.5" width="40" height="49" rx="1"/>
+            <rect class="sd-ui-search" x="230" y="153.4" width="36" height="3.8" rx=".7"/><circle class="sd-ui-lupa" cx="263.6" cy="155.3" r=".95"/>
+            <rect class="sd-ui-card" x="230" y="159.5" width="36" height="12" rx=".8"/><rect class="sd-ui-num" x="232" y="161.1" width="12" height="1.4" rx=".4"/><rect class="sd-ui-txt" x="232" y="163.7" width="14" height=".9" rx=".45"/><rect class="sd-ui-txt" x="232" y="165.8" width="12" height=".9" rx=".45"/><rect class="sd-ui-txt" x="232" y="167.9" width="15" height=".9" rx=".45"/><path class="sd-ui-farm" d="M255 162.5l8.5-1.4 1.3 7.6-9.6 .4z"/><rect class="sd-ui-card" x="230" y="173.5" width="36" height="12" rx=".8"/><rect class="sd-ui-num" x="232" y="175.1" width="12" height="1.4" rx=".4"/><rect class="sd-ui-txt" x="232" y="177.7" width="14" height=".9" rx=".45"/><rect class="sd-ui-txt" x="232" y="179.8" width="12" height=".9" rx=".45"/><rect class="sd-ui-txt" x="232" y="181.9" width="15" height=".9" rx=".45"/><path class="sd-ui-farm" d="M255 176.5l4 1.5 3 3-2.5 4 .5 2.5-3-.5-1-3-2 1.5z"/><rect class="sd-ui-card" x="230" y="187.5" width="36" height="12" rx=".8"/><rect class="sd-ui-num" x="232" y="189.1" width="12" height="1.4" rx=".4"/><rect class="sd-ui-txt" x="232" y="191.7" width="14" height=".9" rx=".45"/><rect class="sd-ui-txt" x="232" y="193.8" width="12" height=".9" rx=".45"/><rect class="sd-ui-txt" x="232" y="195.9" width="15" height=".9" rx=".45"/><path class="sd-ui-farm" d="M255 190.5l7-1-1 2.5 3 1-6 1 3 3-4 1z"/>
+            <!-- mapa-múndi escuro com pin e cluster -->
+            <rect class="sd-ui-ocean" x="270" y="151.5" width="72" height="49" rx="1"/>
+            <path class="sd-ui-land" d="M274 158c3-3 9-3 12-1 2 2 0 5-2 6-2 2-1 4-3 5-3 1-4-1-5-3s-5-4-2-7z"/>
+            <path class="sd-ui-ice" d="M291 154c2-1 5 0 5 2s-3 3-5 2-1-3 0-4z"/>
+            <path class="sd-ui-land" d="M285 172c3-1 7 1 8 4 1 4-2 7-3 10-1 4-2 7-3 5-1-3-1-6-2-9s-3-8 0-10z"/>
+            <path class="sd-ui-land" d="M305 156c3-2 7-1 8 1s-1 3-3 4-3 1-5 0-2-4 0-5z"/>
+            <path class="sd-ui-desert" d="M303 165c4-2 10-1 12 2s1 6-1 9-3 6-5 8-4 1-4-2 0-5-2-8-4-7 0-9z"/>
+            <path class="sd-ui-land" d="M314 156c6-3 16-3 22 0 4 2 4 6 1 8-3 3-7 2-10 4-3 1-5 4-8 3s-3-5-5-7-4-6 0-8z"/>
+            <path class="sd-ui-land" d="M330 182c2-1 5 0 5 2s-2 3-4 3-3-4-1-5z"/>
+            <g class="sd-ui-cluster"><circle cx="290.5" cy="182.5" r="2.8"/><text x="290.5" y="183.5">5</text></g>
+            <path class="sd-ui-pin" d="M289.5 178c-1.6-1.8-2.4-2.7-2.4-3.8a2.4 2.4 0 0 1 4.8 0c0 1.1-.8 2-2.4 3.8z"/>
           </g>
 
           <!-- mapa na tela -->
@@ -225,6 +245,8 @@
             <g class="sd-pin"><path d="M276 147c-4-5-7-7.5-7-10.5a7 7 0 0 1 14 0c0 3-3 5.5-7 10.5z"/><circle cx="276" cy="136.5" r="2.4"/></g>
             <rect class="sd-scan" x="224" y="126" width="3" height="76"/>
           </g>
+          <!-- logo da Treevia só na tela verde-escura: depois que o pacote chega (antes do mapa) e enquanto o dado volta -->
+          <g class="sd-idle-logo"><circle cx="285" cy="164" r="23"/><image href="logo.png" x="266" y="148.5" width="38" height="31.2" preserveAspectRatio="xMidYMid meet"/></g>
           <rect class="sd-flash" x="224" y="126" width="122" height="76" rx="4"/>
           </g>
         </g>
