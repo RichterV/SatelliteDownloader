@@ -106,8 +106,8 @@ test('tela vazia: satélite com um olho que olha para a Terra e globo com contin
   assert.match(svg, /class="sd-eye"/, 'olho');
   assert.match(svg, /<g class="sd-pupil">/, 'pupila que se move');
   assert.doesNotMatch(svg, /M89 64q6 5 12 0/, 'sem o sorriso antigo');
-  assert.match(css, /\.sd-pupil \{[^}]*animation: sd-look [^;]*infinite/, 'olho varre de um lado para o outro');
-  assert.match(css, /@keyframes sd-look \{/);
+  assert.match(css, /\.sd-pupil \{[^}]*animation: sd-gaze var\(--sd-t\)[^;]*infinite/, 'olhar segue a história do ciclo');
+  assert.match(css, /@keyframes sd-gaze \{/);
   assert.match(svg, /<clipPath id="sd-globe-clip">/, 'continentes recortados no globo');
   assert.ok((svg.match(/class="sd-continent"/g) || []).length >= 5, 'continentes desenhados');
   assert.match(svg, /América do Sul/);
@@ -200,7 +200,8 @@ test('tela vazia: logo da Treevia só na tela verde-escura (ao receber o pacote 
   assert.ok(at(logo, 43) > 0.9 && at(logo, 85) > 0.9, 'logo nas duas telas verdes');
   // pin assenta antes de o mapa começar a sumir
   const pinRest = +css.match(/@keyframes sd-pin \{[\s\S]*?\n {2}([\d.]+)%, 92\.31%, 100%/)[1];
-  assert.ok(pinRest < 73.85, `pin assenta (${pinRest}%) antes de o mapa sumir`);
+  const mapFadeStart = +css.match(/@keyframes sd-map \{[^\n]*?([\d.]+)% \{ opacity: 0; visibility: visible; \}/)[1];
+  assert.ok(pinRest < mapFadeStart, `pin assenta (${pinRest}%) antes de o mapa sumir (${mapFadeStart}%)`);
 });
 
 test('tela vazia: mapa florestal com texturas por idade e elementos animados do setor', () => {
@@ -220,4 +221,57 @@ test('tela vazia: mapa florestal com texturas por idade e elementos animados do 
   // caminhão: ângulo contínuo (sem dar meia-volta entre quadros)
   const ang = [...css.match(/@keyframes sd-truck \{([\s\S]*?)\n\}/)[1].matchAll(/rotate\((-?[\d.]+)deg\)/g)].map(m => +m[1]);
   for (let i = 1; i < ang.length; i++) assert.ok(Math.abs(ang[i] - ang[i - 1]) < 45, `caminhão gira ${ang[i - 1]} -> ${ang[i]}`);
+});
+
+test('tela vazia: satélite com câmera, feixe de captura, identidade Treevia e olho expressivo', () => {
+  const svg = html.match(/<svg class="sd-anim"[\s\S]*?<\/svg>/)[0];
+  const front = svg.slice(svg.indexOf('class="sd-orbit-front"'));
+  // câmera no lugar do prato, nas duas cópias
+  assert.equal((svg.match(/class="sd-lens"/g) || []).length, 2, 'lente nas duas cópias');
+  assert.doesNotMatch(svg, /sd-dish/, 'sem o prato antigo');
+  // identidade: faixa verde e logo no corpo; luz da antena verde
+  assert.equal((svg.match(/class="sd-band"/g) || []).length, 2);
+  assert.match(css, /\.sd-blink \{ fill: #2fd27a/, 'luz verde na antena');
+  // feixe só na cópia da frente; ordem: feixe -> flash -> pacote
+  assert.match(front, /class="sd-beam"/);
+  const first = (k, re) => { const m = css.match(re); assert.ok(m, k); return +m[1]; };
+  const beamOff = first('feixe', /@keyframes sd-beam \{[^\n]*?([\d.]+)%, 100% \{ opacity: 0/);
+  const flashPeak = first('flash', /@keyframes sd-cam-flash \{[^\n]*?([\d.]+)% \{ opacity: \.95/);
+  const packetOn = first('pacote', /@keyframes sd-drop \{\s*0%, [\d.]+%, [\d.]+% \{[^}]*\}\s*([\d.]+)% \{[^}]*opacity: 1/);
+  assert.ok(beamOff <= flashPeak + 0.5 && flashPeak < packetOn, `feixe (${beamOff}%) -> flash (${flashPeak}%) -> pacote (${packetOn}%)`);
+  // olho: arregala quando o pacote sai e fecha feliz (^) ao receber o mini-mapa
+  assert.match(svg, /<g class="sd-eye-mood">[\s\S]*?<g class="sd-eye-g">/);
+  assert.match(css, /@keyframes sd-mood \{[\s\S]*?scale\(1\.2\d?\)[\s\S]*?scale\(1, \.00\d\)/, 'arregala e fecha feliz (olho some, fica só o arco)');
+  const happyOn = first('feliz', /@keyframes sd-happy \{[^\n]*?([\d.]+)%, [\d.]+% \{ opacity: 1/);
+  const upArrive = first('chegada', /@keyframes sd-up \{[\s\S]*?\n {2}([\d.]+)% \{[^\n]*scale\(0\.35\)/);
+  assert.ok(happyOn >= upArrive - 0.5, `olho feliz (${happyOn}%) quando o mini-mapa chega (${upArrive}%)`);
+});
+
+test('tela vazia: zoom leve (mapa só com o zoom completo), feixe sobre a América do Sul e colheita sem copas cortadas', () => {
+  const svg = html.match(/<svg class="sd-anim"[\s\S]*?<\/svg>/)[0];
+  // desempenho: durante o zoom (entrada e saída) o mapa fica oculto (visibility), só o monitor é ampliado
+  const zoom = css.match(/@keyframes sd-zoom \{([\s\S]*?)\n\}/)[1];
+  const zIn = +zoom.match(/\n {2}([\d.]+)%, [\d.]+% \{ transform: translate/)[1];
+  const zOut = +zoom.match(/\n {2}[\d.]+%, ([\d.]+)% \{ transform: translate/)[1];
+  const mapKf = css.match(/@keyframes sd-map \{([^\n]*)\}/)[1];
+  const visibleFrom = +mapKf.match(/([\d.]+)% \{ visibility: visible; \}/)[1];
+  const hiddenFrom = +mapKf.match(/([\d.]+)%, 92\.31%, 100% \{ opacity: 0; visibility: hidden; \}/)[1];
+  assert.ok(visibleFrom >= zIn && hiddenFrom <= zOut, `mapa visível só entre o fim do zoom (${zIn}%) e o início da saída (${zOut}%)`);
+  assert.match(css, /@keyframes sd-ui \{[^\n]*visibility: hidden/, 'tela da plataforma oculta quando transparente');
+  // satélite sem o logo (só a faixa verde)
+  assert.doesNotMatch(svg.slice(svg.indexOf('class="sd-orbit-front"'), svg.indexOf('<!-- computador')), /logo\.png/, 'sem logo no satélite (frente)');
+  assert.doesNotMatch(svg.slice(svg.indexOf('class="sd-orbit-back"'), svg.indexOf('class="sd-globe"')), /logo\.png/, 'sem logo no satélite (trás)');
+  // feixe: a base fica sobre a América do Sul (caixa do continente projetado: x 125-222, y 123-245)
+  const b = svg.match(/class="sd-beam" d="M[\d.]+ [\d.]+L([\d.]+) ([\d.]+)Q[\d.]+ [\d.]+ ([\d.]+) ([\d.]+)Z"/).slice(1).map(Number);
+  for (const [x, y] of [[b[0], b[1]], [b[2], b[3]]]) assert.ok(x > 125 && x < 222 && y > 123 && y < 245, `feixe termina no continente (${x}, ${y})`);
+  // colheita: nenhuma copa cortada pela frente de corte (x da frente ~303,6 no topo e 302,8 na base)
+  const crowns = [...svg.matchAll(/class="sd-crown" cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/g)].map(m => m.slice(1).map(Number));
+  const standing = crowns.filter(([x]) => x > 303);
+  assert.ok(standing.length >= 10, 'árvores em pé desenhadas uma a uma');
+  for (const [x, y, r] of standing) {
+    const cut = 303.6 + (302.8 - 303.6) * (y - 131.4) / (151.9 - 131.4);
+    assert.ok(x - r >= cut, `copa em (${x}, ${y}) inteira, à direita da frente de corte`);
+  }
+  assert.ok((svg.match(/class="sd-felled"/g) || []).length >= 2, 'árvores derrubadas inteiras no solo');
+  assert.doesNotMatch(svg, /<path class="sd-mature" d="M292 131/, 'talhão em colheita sem textura cortando copas');
 });

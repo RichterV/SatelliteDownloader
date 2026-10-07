@@ -97,6 +97,7 @@
           <pattern id="sd-forest-tex" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="1.4" cy="1.5" r="1.6" fill="#3f8a57" stroke="#24553a" stroke-width=".25"/><circle cx="3.9" cy="3.8" r="1.4" fill="#357a4b" stroke="#24553a" stroke-width=".25"/><circle cx="4.2" cy="1.1" r=".9" fill="#4b9a64"/></pattern>
           <pattern id="sd-beds" width="3.4" height="3.6" patternUnits="userSpaceOnUse"><rect x=".2" y=".2" width="3" height="3.2" rx=".4" fill="#cfe9b8"/></pattern>
           <clipPath id="sd-screen-clip"><rect x="224" y="126" width="122" height="76" rx="4"/></clipPath>
+          <linearGradient id="sd-beam-grad" gradientUnits="userSpaceOnUse" x1="105.8" y1="90" x2="184.76" y2="177.69"><stop offset="0" stop-color="#fff3a6" stop-opacity=".85"/><stop offset="1" stop-color="#fff3a6" stop-opacity="0"/></linearGradient>
           <clipPath id="sd-globe-clip"><circle cx="200" cy="130" r="128"/></clipPath>
         </defs>
         <!-- satélite atrás da Terra (entrada orbitando); troca com a cópia da frente fora do disco -->
@@ -111,7 +112,9 @@
               <line class="sd-ink-line" x1="95" y1="46" x2="95" y2="36"/>
               <circle class="sd-blink" cx="95" cy="34" r="3"/>
               <rect class="sd-sat-body" x="80" y="46" width="30" height="28" rx="7"/>
+              <rect class="sd-band" x="83.4" y="70.2" width="23.2" height="2.5" rx="1.25"/>
               <!-- olho: a pupila aponta para a Terra (baixo/direita) e varre de um lado para o outro -->
+              <g class="sd-eye-mood">
               <g class="sd-eye-g">
                 <circle class="sd-eye" cx="95" cy="60" r="8.6"/>
                 <g class="sd-pupil">
@@ -120,8 +123,14 @@
                   <circle class="sd-eye-shine" cx="93.6" cy="58.6" r="1"/>
                 </g>
               </g>
-              <line class="sd-ink-line" x1="95" y1="74" x2="95" y2="80"/>
-              <path class="sd-dish" d="M86 80q9 10 18 0z"/>
+              </g>
+              <path class="sd-happy" d="M88.4 62.4q6.6-7.2 13.2 0"/>
+              <!-- câmera apontada para a Terra -->
+              <rect class="sd-cam-mount" x="91.3" y="73" width="7.4" height="4.4" rx="1"/>
+              <circle class="sd-lens" cx="95" cy="81" r="4.7"/>
+              <circle class="sd-lens-glass" cx="95" cy="81" r="2.9"/>
+              <circle class="sd-lens-shine" cx="93.8" cy="79.8" r=".95"/>
+              <circle class="sd-cam-flash" cx="95" cy="81" r="5"/>
             </g>
         </g></g>
         <!-- Terra cartunesca: oceano, continentes (América do Sul ao centro), brilho e sombra -->
@@ -157,6 +166,8 @@
           <g class="sd-orbit-front">
           <circle class="sd-sat-glow" cx="95" cy="62" r="52"/>
           <g class="sd-sat-bob">
+            <!-- feixe de captura: varre a América do Sul (Nordeste -> Amazônia -> Colômbia) antes de enviar o pacote -->
+            <path class="sd-beam" d="M105.8 90L202.94 168.67Q195.46 189.58 173.88 194.83Z"/>
             <g transform="translate(95 60) scale(1.35) translate(-95 -60) rotate(-20 95 60)">
               <line class="sd-ink-line" x1="75" y1="60" x2="80" y2="60"/>
               <line class="sd-ink-line" x1="110" y1="60" x2="115" y2="60"/>
@@ -167,7 +178,9 @@
               <line class="sd-ink-line" x1="95" y1="46" x2="95" y2="36"/>
               <circle class="sd-blink" cx="95" cy="34" r="3"/>
               <rect class="sd-sat-body" x="80" y="46" width="30" height="28" rx="7"/>
+              <rect class="sd-band" x="83.4" y="70.2" width="23.2" height="2.5" rx="1.25"/>
               <!-- olho: a pupila aponta para a Terra (baixo/direita) e varre de um lado para o outro -->
+              <g class="sd-eye-mood">
               <g class="sd-eye-g">
                 <circle class="sd-eye" cx="95" cy="60" r="8.6"/>
                 <g class="sd-pupil">
@@ -176,8 +189,14 @@
                   <circle class="sd-eye-shine" cx="93.6" cy="58.6" r="1"/>
                 </g>
               </g>
-              <line class="sd-ink-line" x1="95" y1="74" x2="95" y2="80"/>
-              <path class="sd-dish" d="M86 80q9 10 18 0z"/>
+              </g>
+              <path class="sd-happy" d="M88.4 62.4q6.6-7.2 13.2 0"/>
+              <!-- câmera apontada para a Terra -->
+              <rect class="sd-cam-mount" x="91.3" y="73" width="7.4" height="4.4" rx="1"/>
+              <circle class="sd-lens" cx="95" cy="81" r="4.7"/>
+              <circle class="sd-lens-glass" cx="95" cy="81" r="2.9"/>
+              <circle class="sd-lens-shine" cx="93.8" cy="79.8" r=".95"/>
+              <circle class="sd-cam-flash" cx="95" cy="81" r="5"/>
             </g>
           </g>
           </g>
@@ -229,7 +248,7 @@
             <g class="sd-plots">
               <g class="sd-stand" style="transform-origin:247px 141px"><path class="sd-mature" d="M232 131Q246 128 260 129.5L262 152Q248 155 233.5 154Z"/></g>
               <g class="sd-stand" style="transform-origin:277px 140px;animation-delay:.12s"><path class="sd-st2" d="M265 129.5Q277 128.5 289 130L288 151.5Q276 153 266 152.5Z"/><path class="sd-rows" d="M265 129.5Q277 128.5 289 130L288 151.5Q276 153 266 152.5Z"/></g>
-              <g class="sd-stand" style="transform-origin:304px 142px;animation-delay:.24s"><path class="sd-mature" d="M292 131Q304 131 316 134L314.5 152.5Q302 152 291.5 151Z"/><path class="sd-harvested" d="M292 131Q298 131 303.6 131.4L302.8 151.9Q297 151.5 291.5 151Z"/></g>
+              <g class="sd-stand" style="transform-origin:304px 142px;animation-delay:.24s"><path class="sd-forest-floor" d="M292 131Q304 131 316 134L314.5 152.5Q302 152 291.5 151Z"/><path class="sd-harvested" d="M292 131Q298 131 303.6 131.4L302.8 151.9Q297 151.5 291.5 151Z"/><path class="sd-stumps" d="M292 131Q298 131 303.6 131.4L302.8 151.9Q297 151.5 291.5 151Z"/><g class="sd-felled" transform="translate(296.2 142.2) rotate(-24)"><rect x="0" y="-.32" width="4.6" height=".64" rx=".3"/><circle class="sd-crown" cx="5.7" cy="0" r="1.35"/></g><g class="sd-felled" transform="translate(297.4 144.6) rotate(-8)"><rect x="0" y="-.32" width="4.2" height=".64" rx=".3"/><circle class="sd-crown" cx="5.2" cy="0" r="1.3"/></g><circle class="sd-crown" cx="307.9" cy="134.5" r="1.45"/><circle class="sd-crown-hi" cx="307.5" cy="134.1" r=".45"/><circle class="sd-crown" cx="311.2" cy="134.5" r="1.45"/><circle class="sd-crown-hi" cx="310.8" cy="134.1" r=".45"/><circle class="sd-crown" cx="306.25" cy="137.8" r="1.45"/><circle class="sd-crown-hi" cx="305.85" cy="137.4" r=".45"/><circle class="sd-crown" cx="309.55" cy="137.8" r="1.45"/><circle class="sd-crown-hi" cx="309.15" cy="137.4" r=".45"/><circle class="sd-crown" cx="312.85" cy="137.8" r="1.45"/><circle class="sd-crown-hi" cx="312.45" cy="137.4" r=".45"/><circle class="sd-crown" cx="307.9" cy="141.1" r="1.45"/><circle class="sd-crown-hi" cx="307.5" cy="140.7" r=".45"/><circle class="sd-crown" cx="311.2" cy="141.1" r="1.45"/><circle class="sd-crown-hi" cx="310.8" cy="140.7" r=".45"/><circle class="sd-crown" cx="306.25" cy="144.4" r="1.45"/><circle class="sd-crown-hi" cx="305.85" cy="144" r=".45"/><circle class="sd-crown" cx="309.55" cy="144.4" r="1.45"/><circle class="sd-crown-hi" cx="309.15" cy="144" r=".45"/><circle class="sd-crown" cx="312.85" cy="144.4" r="1.45"/><circle class="sd-crown-hi" cx="312.45" cy="144" r=".45"/><circle class="sd-crown" cx="307.9" cy="147.7" r="1.45"/><circle class="sd-crown-hi" cx="307.5" cy="147.3" r=".45"/><circle class="sd-crown" cx="311.2" cy="147.7" r="1.45"/><circle class="sd-crown-hi" cx="310.8" cy="147.3" r=".45"/><circle class="sd-crown" cx="309.55" cy="151" r="1.45"/><circle class="sd-crown-hi" cx="309.15" cy="150.6" r=".45"/><circle class="sd-crown" cx="312.85" cy="151" r="1.45"/><circle class="sd-crown-hi" cx="312.45" cy="150.6" r=".45"/><path class="sd-stand-edge" d="M292 131Q304 131 316 134L314.5 152.5Q302 152 291.5 151Z"/></g>
               <g class="sd-stand" style="transform-origin:248px 186px;animation-delay:.36s"><path class="sd-young" d="M236 176Q248 175.5 261 177L260 195.5Q247 196.5 235 195Z"/><path class="sd-sprouts" d="M236 176Q248 175.5 261 177L260 195.5Q247 196.5 235 195Z"/></g>
               <g class="sd-stand" style="transform-origin:276px 187px;animation-delay:.48s"><path class="sd-nursery" d="M265 177Q276 177.5 288 179L286.5 195.5Q275 195 264 194Z"/><circle class="sd-seedling" cx="268" cy="181.2" r=".95" style="transform-origin:268px 181.2px;animation-delay:0s"/><circle class="sd-seedling" cx="271.4" cy="181.2" r=".95" style="transform-origin:271.4px 181.2px;animation-delay:0.11s"/><circle class="sd-seedling" cx="274.8" cy="181.2" r=".95" style="transform-origin:274.8px 181.2px;animation-delay:0.22s"/><circle class="sd-seedling" cx="278.2" cy="181.2" r=".95" style="transform-origin:278.2px 181.2px;animation-delay:0.33s"/><circle class="sd-seedling" cx="281.6" cy="181.2" r=".95" style="transform-origin:281.6px 181.2px;animation-delay:0.44s"/><circle class="sd-seedling" cx="285" cy="181.2" r=".95" style="transform-origin:285px 181.2px;animation-delay:0.55s"/><circle class="sd-seedling" cx="268" cy="184.8" r=".95" style="transform-origin:268px 184.8px;animation-delay:0.11s"/><circle class="sd-seedling" cx="271.4" cy="184.8" r=".95" style="transform-origin:271.4px 184.8px;animation-delay:0.22s"/><circle class="sd-seedling" cx="274.8" cy="184.8" r=".95" style="transform-origin:274.8px 184.8px;animation-delay:0.33s"/><circle class="sd-seedling" cx="278.2" cy="184.8" r=".95" style="transform-origin:278.2px 184.8px;animation-delay:0.44s"/><circle class="sd-seedling" cx="281.6" cy="184.8" r=".95" style="transform-origin:281.6px 184.8px;animation-delay:0.55s"/><circle class="sd-seedling" cx="285" cy="184.8" r=".95" style="transform-origin:285px 184.8px;animation-delay:0.66s"/><circle class="sd-seedling" cx="268" cy="188.4" r=".95" style="transform-origin:268px 188.4px;animation-delay:0.22s"/><circle class="sd-seedling" cx="271.4" cy="188.4" r=".95" style="transform-origin:271.4px 188.4px;animation-delay:0.33s"/><circle class="sd-seedling" cx="274.8" cy="188.4" r=".95" style="transform-origin:274.8px 188.4px;animation-delay:0.44s"/><circle class="sd-seedling" cx="278.2" cy="188.4" r=".95" style="transform-origin:278.2px 188.4px;animation-delay:0.55s"/><circle class="sd-seedling" cx="281.6" cy="188.4" r=".95" style="transform-origin:281.6px 188.4px;animation-delay:0.66s"/><circle class="sd-seedling" cx="285" cy="188.4" r=".95" style="transform-origin:285px 188.4px;animation-delay:0.77s"/><circle class="sd-seedling" cx="268" cy="192" r=".95" style="transform-origin:268px 192px;animation-delay:0.33s"/><circle class="sd-seedling" cx="271.4" cy="192" r=".95" style="transform-origin:271.4px 192px;animation-delay:0.44s"/><circle class="sd-seedling" cx="274.8" cy="192" r=".95" style="transform-origin:274.8px 192px;animation-delay:0.55s"/><circle class="sd-seedling" cx="278.2" cy="192" r=".95" style="transform-origin:278.2px 192px;animation-delay:0.66s"/><circle class="sd-seedling" cx="281.6" cy="192" r=".95" style="transform-origin:281.6px 192px;animation-delay:0.77s"/><circle class="sd-seedling" cx="285" cy="192" r=".95" style="transform-origin:285px 192px;animation-delay:0.88s"/></g>
             </g>

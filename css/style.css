@@ -215,7 +215,7 @@ input:disabled { opacity: .5; }
 .sd-iris { fill: #2f7d4f; }
 .sd-eye-shine { fill: #fff; }
 /* olho olha para a Terra: direção (centro do globo - satélite) no sistema do satélite (girado -20°); varre na perpendicular */
-.sd-pupil { transform: translate(1.81px, 2.39px); animation: sd-look 4.6s ease-in-out infinite; }
+.sd-pupil { transform: translate(1.81px, 2.39px); animation: sd-gaze var(--sd-t) ease-in-out infinite; }
 /* piscada de desenho: o olho achata até virar uma linha (fecha ~80 ms, abre ~130 ms), às vezes em dose dupla */
 .sd-eye-g { transform-origin: 95px 60px; animation: sd-blink-eye 5.3s linear infinite; }
 .sd-star { fill: #ffd23f; stroke: var(--ink); stroke-width: .8; animation: sd-twinkle 2s ease-in-out infinite; transform-origin: center; }
@@ -224,8 +224,17 @@ input:disabled { opacity: .5; }
 .sd-panel { fill: #4aa3df; stroke: var(--ink); stroke-width: 2.5; }
 .sd-panel-grid { stroke: #cfeaf9; stroke-width: 1.2; }
 .sd-sat-body { fill: #eef3ef; stroke: var(--ink); stroke-width: 2.5; }
-.sd-dish { fill: #ffd23f; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
-.sd-blink { fill: #e5484d; stroke: var(--ink); stroke-width: 1.5; animation: sd-blink 1s steps(1) infinite; }
+/* câmera, faixa Treevia, feixe de captura e expressões do olho */
+.sd-cam-mount { fill: #9aa7a0; stroke: var(--ink); stroke-width: 1.6; }
+.sd-lens { fill: #34423b; stroke: var(--ink); stroke-width: 1.8; }
+.sd-lens-glass { fill: #4aa3df; stroke: #1d3557; stroke-width: .8; }
+.sd-lens-shine { fill: #fff; opacity: .85; }
+.sd-cam-flash { fill: #fff; opacity: 0; transform-origin: 95px 81px; animation: sd-cam-flash var(--sd-t) ease-out infinite; }
+.sd-band { fill: #2f7d4f; }
+.sd-beam { fill: url(#sd-beam-grad); opacity: 0; transform-origin: 105.8px 90px; animation: sd-beam var(--sd-t) ease-in-out infinite; }
+.sd-eye-mood { transform-origin: 95px 60px; animation: sd-mood var(--sd-t) ease-in-out infinite; }
+.sd-happy { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linecap: round; opacity: 0; animation: sd-happy var(--sd-t) linear infinite; }
+.sd-blink { fill: #2fd27a; stroke: var(--ink); stroke-width: 1.5; animation: sd-blink 1s steps(1) infinite; }
 .sd-sat-bob { animation: sd-bob 3s ease-in-out infinite alternate; }
 /* o satélite chega orbitando: sai de trás da Terra (cópia atrás do globo) e vem para a frente */
 .sd-orbit-back { transform-origin: 95px 60px; opacity: 0; animation: sd-orbit-back var(--sd-t) linear infinite; }
@@ -347,11 +356,36 @@ input:disabled { opacity: .5; }
   96.61%, 100% { transform: translate(292px, -4px) scale(.9); opacity: 0; }
 }
 @keyframes sd-bob { to { transform: translateY(-6px); } }
-@keyframes sd-look {
-  0%, 12% { transform: translate(0.77px, 3.18px); }
-  38%, 52% { transform: translate(2.85px, 1.61px); }
-  78%, 100% { transform: translate(0.77px, 3.18px); }
+@keyframes sd-gaze {
+  0% { transform: translate(0.77px, 3.18px); }
+  5% { transform: translate(2.85px, 1.61px); }
+  10% { transform: translate(0.77px, 3.18px); }
+  15.4% { transform: translate(1.81px, 2.39px); }
+  16.6% { transform: translate(1.55px, 2.57px); }
+  20.2% { transform: translate(0.67px, 2.92px); }
+  21.6% { transform: translate(0.31px, 2.98px); }
+  23.85% { transform: translate(0.31px, 2.98px); }
+  27% { transform: translate(2.5px, 1.6px); }
+  33% { transform: translate(2.75px, 1.2px); }
+  38.46% { transform: translate(2.13px, 2.11px); }
+  80% { transform: translate(2.13px, 2.11px); }
+  84% { transform: translate(2.62px, 1.47px); }
+  87.5% { transform: translate(1px, 2.8px); }
+  88.4% { transform: translate(0.31px, 2.98px); }
+  92.6% { transform: translate(2.8px, 1px); }
+  100% { transform: translate(0.77px, 3.18px); }
 }
+@keyframes sd-beam { 0%, 15.6% { opacity: 0; transform: rotate(-9deg); } 16.6% { opacity: 1; } 20.2% { opacity: 1; transform: rotate(9deg); } 21%, 100% { opacity: 0; transform: rotate(9deg); } }
+@keyframes sd-cam-flash { 0%, 20.2% { opacity: 0; transform: scale(.6); } 20.7% { opacity: .95; transform: scale(1.5); } 21.6%, 100% { opacity: 0; transform: scale(1.9); } }
+@keyframes sd-mood {
+  0%, 21.6% { transform: scale(1); }
+  22.4% { transform: scale(1.22); }
+  24%, 38.5% { transform: scale(1.1); }
+  40%, 88.2% { transform: scale(1); }
+  88.9%, 91.8% { transform: scale(1, .001); }
+  92.6%, 100% { transform: scale(1); }
+}
+@keyframes sd-happy { 0%, 88.6% { opacity: 0; } 89%, 91.6% { opacity: 1; } 92%, 100% { opacity: 0; } }
 @keyframes sd-blink-eye {
   0%, 40% { transform: scaleY(1); animation-timing-function: ease-in; }
   41.5% { transform: scaleY(.08); }
@@ -367,10 +401,10 @@ input:disabled { opacity: .5; }
 @keyframes sd-blink { 0% { opacity: 1; } 50% { opacity: .25; } }
 @keyframes sd-twinkle { 0%, 100% { opacity: .35; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.1); } }
 @keyframes sd-dot { 0%, 100% { transform: scale(.6); opacity: .5; } 50% { transform: scale(1.15); opacity: 1; } }
-@keyframes sd-ui { 0%, 15.38%, 38.46% { opacity: 1; } 39.23%, 95% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes sd-ui { 0%, 15.38%, 38.46% { opacity: 1; visibility: visible; } 39.23% { opacity: 0; visibility: visible; } 39.3%, 94.9% { opacity: 0; visibility: hidden; } 95% { opacity: 0; visibility: visible; } 100% { opacity: 1; visibility: visible; } }
 @keyframes sd-drop {
-  0%, 15.38%, 20% { transform: translate(106.1px, 92.4px) rotate(0deg) scale(0); opacity: 0; }
-  22.31% { transform: translate(108.1px, 100.4px) rotate(0deg) scale(1.2); opacity: 1; }
+  0%, 15.38%, 21.4% { transform: translate(106.1px, 92.4px) rotate(0deg) scale(0); opacity: 0; }
+  22.7% { transform: translate(108.1px, 100.4px) rotate(0deg) scale(1.2); opacity: 1; }
   23.85% { transform: translate(114.1px, 102.4px) rotate(0deg) scale(1); opacity: 1; }
   25.06% { transform: translate(117.2px, 99.99px) rotate(6.13deg) scale(1); opacity: 1; }
   26.28% { transform: translate(126.32px, 93.6px) rotate(24.12deg) scale(1); opacity: 1; }
@@ -394,30 +428,30 @@ input:disabled { opacity: .5; }
   80%, 92.31%, 100% { transform: none; }
 }
 @keyframes sd-idle-logo {
-  /* tela verde-escura depois que o pacote chega: some antes de o mapa começar */
+  /* tela verde-escura depois que o pacote chega e durante o zoom de entrada; some antes de o mapa aparecer */
   0%, 39.3% { opacity: 0; transform: scale(.85); }
   40.8% { opacity: 1; transform: scale(1.04); }
-  41.6%, 45% { opacity: 1; transform: scale(1); }
-  45.38%, 77% { opacity: 0; transform: scale(1); }
-  /* tela verde-escura enquanto o dado volta ao satélite: só depois que o mapa sumiu; sai quando a plataforma volta */
-  77.1% { opacity: 0; transform: scale(.85); }
-  77.9% { opacity: 1; transform: scale(1.04); }
-  78.7%, 94.4% { opacity: 1; transform: scale(1); }
+  41.6%, 50% { opacity: 1; transform: scale(1); }
+  50.75%, 72.31% { opacity: 0; transform: scale(1); }
+  /* tela verde-escura no zoom de saída e enquanto o dado volta; sai quando a plataforma volta */
+  72.4% { opacity: 0; transform: scale(.9); }
+  73.6% { opacity: 1; transform: scale(1.04); }
+  74.4%, 94.4% { opacity: 1; transform: scale(1); }
   95%, 100% { opacity: 0; transform: scale(1); }
 }
-@keyframes sd-map { 0%, 15.38%, 45.38% { opacity: 0; } 48.46%, 73.85% { opacity: 1; } 76.92%, 92.31%, 100% { opacity: 0; } }
-@keyframes sd-pop { 0%, 15.38%, 50.77% { transform: scale(0); } 54.62% { transform: scale(1.15); } 56.15%, 92.31%, 100% { transform: scale(1); } }
-@keyframes sd-pop2 { 0%, 15.38%, 48.46% { transform: scale(0); } 52.31% { transform: scale(1.12); } 53.85%, 92.31%, 100% { transform: scale(1); } }
-@keyframes sd-draw { 0%, 15.38%, 53.08% { stroke-dashoffset: 150; } 59.23%, 92.31%, 100% { stroke-dashoffset: 0; } }
-@keyframes sd-draw2 { 0%, 15.38%, 56.15% { stroke-dashoffset: 60; } 61.54%, 92.31%, 100% { stroke-dashoffset: 0; } }
-@keyframes sd-fade-late { 0%, 15.38%, 59.23% { opacity: 0; } 61.54%, 92.31%, 100% { opacity: 1; } }
+@keyframes sd-map { 0%, 15.38%, 50.77% { opacity: 0; visibility: hidden; } 50.8% { visibility: visible; } 52.3%, 70.6% { opacity: 1; visibility: visible; } 72.3% { opacity: 0; visibility: visible; } 72.31%, 92.31%, 100% { opacity: 0; visibility: hidden; } }
+@keyframes sd-pop { 0%, 15.38%, 53.78% { transform: scale(0); } 56.75% { transform: scale(1.15); } 57.93%, 92.31%, 100% { transform: scale(1); } }
+@keyframes sd-pop2 { 0%, 15.38%, 52% { transform: scale(0); } 54.97% { transform: scale(1.12); } 56.16%, 92.31%, 100% { transform: scale(1); } }
+@keyframes sd-draw { 0%, 15.38%, 55.56% { stroke-dashoffset: 150; } 60.31%, 92.31%, 100% { stroke-dashoffset: 0; } }
+@keyframes sd-draw2 { 0%, 15.38%, 57.93% { stroke-dashoffset: 60; } 62.09%, 92.31%, 100% { stroke-dashoffset: 0; } }
+@keyframes sd-fade-late { 0%, 15.38%, 60.31% { opacity: 0; } 62.09%, 92.31%, 100% { opacity: 1; } }
 @keyframes sd-pin {
-  0%, 15.38%, 62.31% { transform: translateY(-22px); opacity: 0; }
-  65.38% { transform: translateY(0); opacity: 1; }
-  66.92% { transform: translateY(-4px); }
-  68.46%, 92.31%, 100% { transform: translateY(0); opacity: 1; }
+  0%, 15.38%, 62.69% { transform: translateY(-22px); opacity: 0; }
+  65.05% { transform: translateY(0); opacity: 1; }
+  66.24% { transform: translateY(-4px); }
+  67.43%, 92.31%, 100% { transform: translateY(0); opacity: 1; }
 }
-@keyframes sd-scan { 0%, 15.38%, 64.62% { transform: translateX(0); opacity: 0; } 65.38% { opacity: .7; } 71.54% { transform: translateX(119px); opacity: .7; } 72.31%, 92.31%, 100% { transform: translateX(119px); opacity: 0; } }
+@keyframes sd-scan { 0%, 15.38%, 64.47% { transform: translateX(0); opacity: 0; } 65.05% { opacity: .7; } 69.81% { transform: translateX(119px); opacity: .7; } 70.4%, 92.31%, 100% { transform: translateX(119px); opacity: 0; } }
 @keyframes sd-up {
   0%, 15.38%, 76.92% { transform: translate(305px, 164px) rotate(0deg) scale(0); opacity: 0; }
   79.23% { transform: translate(305px, 156px) rotate(0deg) scale(1.3); opacity: 1; }
@@ -443,6 +477,13 @@ input:disabled { opacity: .5; }
 .sd-mature { fill: url(#sd-canopy); stroke: #e0a800; stroke-width: 1; stroke-linejoin: round; }
 .sd-young { fill: #b9e19b; stroke: #e0a800; stroke-width: 1; stroke-linejoin: round; }
 .sd-harvested { fill: #c9a56c; stroke: none; }
+/* talhão em colheita: árvores em pé desenhadas uma a uma (sempre inteiras) */
+.sd-forest-floor { fill: #2f6a46; }
+.sd-stumps { fill: url(#sd-stumps); }
+.sd-crown { fill: #3a9160; stroke: #1f5a37; stroke-width: .25; }
+.sd-crown-hi { fill: #6cc48c; opacity: .7; }
+.sd-felled rect { fill: #8a6239; stroke: #5b3a22; stroke-width: .15; }
+.sd-stand-edge { fill: none; stroke: #e0a800; stroke-width: 1; stroke-linejoin: round; }
 .sd-sprouts { fill: url(#sd-sprouts); stroke: none; }
 .sd-nursery { fill: #e6d8b6; stroke: #e0a800; stroke-width: 1; stroke-linejoin: round; }
 .sd-native { fill: url(#sd-forest-tex); stroke: #24553a; stroke-width: .6; stroke-linejoin: round; }
