@@ -59,11 +59,11 @@ input:focus-visible, select:focus-visible, button:focus-visible, .drop:focus-wit
 .drop.error { border-color: var(--bad); background: var(--bad-soft); }
 .drop.error .drop-sub { color: var(--bad); }
 
-.segmented { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; gap: 3px; background: var(--field);
+.segmented { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 3px; gap: 3px; background: var(--field);
   border: 1px solid var(--border); border-radius: 9px; }
 .segmented label { cursor: pointer; }
 .segmented input { position: absolute; opacity: 0; pointer-events: none; }
-.segmented span { display: block; text-align: center; padding: 6px 8px; border-radius: 6px; font-weight: 500; color: var(--muted); }
+.segmented span { display: block; text-align: center; padding: 6px 4px; white-space: nowrap; border-radius: 6px; font-weight: 500; color: var(--muted); }
 .segmented input:checked + span { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
 .segmented input:focus-visible + span { outline: 2px solid var(--accent); }
 
@@ -143,3 +143,5 @@ tr.sel td { background: var(--accent-soft); }
 footer { padding: 16px; text-align: center; color: var(--muted); font-size: .8rem; }
 footer a { color: var(--accent); text-decoration: none; }
 footer a:hover { text-decoration: underline; }
+input:disabled { opacity: .5; }
+#sensorOther { margin-top: 6px; }

@@ -4,6 +4,24 @@ const state = { geo: null, fileBase: 'talhoes', cands: [], idx: -1, img: null, r
 
 $('date').value = Core.isoDay(new Date());
 
+// ---------- satélite ----------
+// Sentinel-2 e Landsat 8/9 ficam no seletor; os secundários em "Outros"
+$('sensorOther').innerHTML = Object.entries(Core.SENSORS).filter(([, s]) => s.group === 'secondary')
+  .map(([k, s]) => `<option value="${k}">${s.label}</option>`).join('');
+function currentSensor() {
+  const v = document.querySelector('input[name=sensor]:checked').value;
+  return v === 'other' ? $('sensorOther').value : v;
+}
+function onSensorChange() {
+  $('sensorOther').classList.toggle('hidden', document.querySelector('input[name=sensor]:checked').value !== 'other');
+  const s = Core.SENSORS[currentSensor()];
+  // produto sem data (DEM): data e janela não se aplicam
+  for (const id of ['date', 'window']) $(id).disabled = !!s.static;
+  $('tol').disabled = !!s.cloudFree;
+}
+document.querySelectorAll('input[name=sensor]').forEach(r => r.addEventListener('change', onSensorChange));
+$('sensorOther').addEventListener('change', onSensorChange);
+
 // ---------- área ----------
 const DROP_HINT = $('fileInfo').textContent;
 ['dragenter', 'dragover'].forEach(ev => $('file').addEventListener(ev, () => $('drop').classList.add('over')));
@@ -42,7 +60,7 @@ const fmtDelta = d => `${d > 0 ? '+' : ''}${d} d`;
 const fmtDate = day => day.split('-').reverse().join('/');
 
 const STATUS = {
-  checking: ['', 'avaliando…'], ok: ['ok', 'sem nuvem'], cloud: ['no', 'nuvem'], nodata: ['no', 'fora da cena'],
+  checking: ['', 'avaliando…'], ok: ['ok', 'sem nuvem'], cloud: ['no', 'nuvem'], nodata: ['no', 'sem dado'],
   skip: ['', 'cena nublada'], rejected: ['', 'descartada'], error: ['no', 'erro'],
 };
 function renderTable() {
@@ -64,7 +82,7 @@ function showResult(show) {
 // ---------- busca ----------
 async function runSearch() {
   const run = ++state.run;
-  const sensor = document.querySelector('input[name=sensor]:checked').value;
+  const sensor = currentSensor();
   const day = $('date').value, win = parseInt($('window').value, 10) || 60;
   const buffer = Math.max(0, parseFloat($('buffer').value) || 0), tol = Math.max(0, parseFloat($('tol').value) || 0);
   if (!day) return setStatus('Informe a data.', 'err');
@@ -73,7 +91,8 @@ async function runSearch() {
   state.cands = []; state.idx = -1;
   try {
     setStatus('Buscando cenas…', 'busy');
-    const items = await Core.stacSearch(sensor, state.geo.bboxLL, Core.addDays(day, -win), Core.addDays(day, win));
+    const [start, end] = Core.searchRange(sensor, day, win);
+    const items = await Core.stacSearch(sensor, state.geo.bboxLL, start, end);
     if (run !== state.run) return;
     state.cands = Core.orderCandidates(items, sensor, day, state.geo);
     renderTable(); $('candPanel').classList.remove('hidden');
@@ -111,8 +130,10 @@ async function showCandidate(c, run) {
     state.img = img;
     const s = Core.SENSORS[sensor];
     $('meta').innerHTML = [
-      ['Data', fmtDate(c.day)], ['Diferença', fmtDelta(c.delta)], ['Satélite', c.satellite],
-      ['Nuvem nos talhões', fmtPct(c.check.cloudPct)], ['Resolução', `${img.res} m`], ['EPSG', img.epsg],
+      ...(s.static ? [] : [['Data', fmtDate(c.day)], ['Diferença', fmtDelta(c.delta)]]), ['Satélite', c.satellite],
+      ...(s.cloudFree ? [] : [['Nuvem nos talhões', fmtPct(c.check.cloudPct)]]),
+      ['Resolução', Core.isGeographic(img.epsg) ? `≈ ${Math.round(img.res * 111320)} m` : `${+img.res.toFixed(2)} m`],
+      ['Projeção', Core.crsLabel(img.epsg)],
     ].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
     $('composite').innerHTML = availableComposites().map((cp, i) => `<option value="${i}" title="${cp.b.join(', ')}">${cp.label}</option>`).join('');
     $('bandSummary').textContent = `Bandas (${img.bands.length})`;
@@ -135,13 +156,13 @@ function draw() {
   const img = state.img; if (!img || $('resultPanel').classList.contains('hidden')) return;
   const cp = availableComposites()[$('composite').value || 0];
   const chans = cp.b.map(n => img.bands.find(b => b.name === n).data);
-  const st = chans.map(d => Core.percentiles(d, 0.02, 0.98));
+  const st = chans.map(d => Core.percentiles(d, 0.02, 0.98, img.nodata));
   const off = document.createElement('canvas'); off.width = img.W; off.height = img.H;
   const octx = off.getContext('2d'), id = octx.createImageData(img.W, img.H), px = id.data;
   for (let i = 0; i < img.W * img.H; i++) {
     let valid = false;
     for (let k = 0; k < 3; k++) {
-      const v = chans[k][i]; if (v) valid = true;
+      const v = chans[k][i]; if (v !== img.nodata && !Number.isNaN(v)) valid = true;
       px[i * 4 + k] = Math.max(0, Math.min(255, 255 * (v - st[k][0]) / (st[k][1] - st[k][0])));
     }
     px[i * 4 + 3] = valid ? 255 : 0;
@@ -179,7 +200,7 @@ $('btnDownload').addEventListener('click', async () => {
   setStatus('Gerando .zip…', 'busy');
   try {
     const buf = Core.buildGeoTIFF(state.img, {
-      SENSOR: Core.SENSORS[p.sensor].label, SATELLITE: c.satellite, ITEM_ID: c.item.id, DATETIME: c.item.properties.datetime,
+      SENSOR: Core.SENSORS[p.sensor].label, SATELLITE: c.satellite, ITEM_ID: (c.items || [c.item]).map(i => i.id).join(','), DATETIME: c.item.properties.datetime || c.item.properties.start_datetime,
       TARGET_DATE: p.day, DELTA_DAYS: c.delta, BUFFER_M: p.buffer,
       CLOUD_PCT_TALHOES: c.check.cloudPct.toFixed(3), SCENE_CLOUD_PCT: c.sceneCloud ?? '',
     });

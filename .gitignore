@@ -12,9 +12,8 @@ desktop.ini
 # Claude Code (configurações locais)
 .claude/settings.local.json
 
-# Node (caso usem ferramentas locais de teste)
+# Node (dependências dos testes)
 node_modules/
-package-lock.json
 
 # Saídas geradas pelo app e dados de teste
 *.tif
@@ -26,6 +25,9 @@ package-lock.json
 *.prj
 *.cpg
 plantio_teste.json
+
+# Fixtures dos testes precisam subir
+!tests/fixtures/**
 
 # Contexto local do Claude Code
 CLAUDE.md

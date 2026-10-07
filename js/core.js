@@ -1,9 +1,28 @@
 // ======================= Núcleo (sem DOM) =======================
+// Cada sensor descreve onde buscar (STAC), quais bandas baixar e como achar nuvem/sem dado.
+//   group       'main' (sempre visível) ou 'secondary' (em "Outros")
+//   collections coleções STAC; o asset de uma banda pode variar por coleção ({ coleção: asset })
+//   dtype       tipo do .tif gerado ('uint16' | 'int16' | 'float32'); nodata = valor sem dado
+//   maskAsset   raster usado para nuvem/sem dado; classify(v) => 'clear' | 'cloud' | 'nodata' (v NaN = fora da cena)
+//   mosaic      junta os tiles da mesma data (groupKey) num único recorte
+//   static      produto sem data (DEM): busca sem filtro de data
+//   cloudFree   sem nuvem no produto (radar, DEM): a máscara só indica sem dado
+//   minWindowDays janela mínima de busca (produtos anuais)
+const PC_STAC = 'https://planetarycomputer.microsoft.com/api/stac/v1/search';
+const ES_STAC = 'https://earth-search.aws.element84.com/v1/search';
+const MODIS_SINU = 'MODIS-SINUSOIDAL';
+
+const isNum = v => typeof v === 'number' && !Number.isNaN(v);
+const landsatQA = v => !isNum(v) || (v & 1) ? 'nodata' : (v & 0b11110) ? 'cloud' : 'clear';
+const landsatScale = (it, b) => b.name === 'thermal' ? { scale: 0.00341802, offset: 149.0, unit: 'K' } : { scale: 0.0000275, offset: -0.2 };
+// 'sentinel-2c' => 'Sentinel-2C', 'landsat-8' => 'Landsat-8'
+const platformLabel = it => (it.properties.platform || '').replace(/^(\w)/, c => c.toUpperCase()).replace(/-(\d)([a-z])$/, (m, d, l) => '-' + d + l.toUpperCase());
+
 const SENSORS = {
   sentinel2: {
-    label: 'Sentinel-2 L2A', short: 'S2',
-    stac: 'https://earth-search.aws.element84.com/v1/search', collection: 'sentinel-2-l2a',
-    res: 10, refAsset: 'blue', maskAsset: 'scl',
+    label: 'Sentinel-2 L2A', short: 'S2', group: 'main', res: 10,
+    stac: ES_STAC, collections: ['sentinel-2-l2a'],
+    dtype: 'uint16', nodata: 0, refAsset: 'blue', maskAsset: 'scl',
     bands: [
       { asset: 'coastal',  name: 'coastal',      code: 'B01' },
       { asset: 'blue',     name: 'blue',         code: 'B02' },
@@ -19,7 +38,7 @@ const SENSORS = {
       { asset: 'swir22',   name: 'swir_2',       code: 'B12' },
     ],
     // SCL: 0 sem dado, 1 saturado/defeituoso, 3 sombra de nuvem, 8/9 nuvem, 10 cirrus
-    classify: v => (v === 0 || v === 1) ? 'nodata' : (v === 3 || v === 8 || v === 9 || v === 10) ? 'cloud' : 'clear',
+    classify: v => (!isNum(v) || v === 0 || v === 1) ? 'nodata' : (v === 3 || v === 8 || v === 9 || v === 10) ? 'cloud' : 'clear',
     satellite: it => (it.properties.platform || '').replace('sentinel-', 'Sentinel-').toUpperCase().replace('SENTINEL', 'Sentinel'),
     scaleFor: (it, b) => {
       const applied = it.properties['earthsearch:boa_offset_applied'];
@@ -36,11 +55,10 @@ const SENSORS = {
     ],
   },
   landsat: {
-    label: 'Landsat 8/9 C2 L2', short: 'LS',
-    stac: 'https://planetarycomputer.microsoft.com/api/stac/v1/search', collection: 'landsat-c2-l2',
+    label: 'Landsat 8/9', short: 'LS', group: 'main', res: 30,
+    stac: PC_STAC, collections: ['landsat-c2-l2'],
     query: { platform: { in: ['landsat-8', 'landsat-9'] } },
-    sign: true, tokenUrl: 'https://planetarycomputer.microsoft.com/api/sas/v1/token/landsat-c2-l2',
-    res: 30, refAsset: 'red', maskAsset: 'qa_pixel',
+    dtype: 'uint16', nodata: 0, refAsset: 'red', maskAsset: 'qa_pixel',
     bands: [
       { asset: 'coastal', name: 'coastal', code: 'SR_B1' },
       { asset: 'blue',    name: 'blue',    code: 'SR_B2' },
@@ -52,9 +70,9 @@ const SENSORS = {
       { asset: 'lwir11',  name: 'thermal', code: 'ST_B10' },
     ],
     // QA_PIXEL: bit0 fill; bit1 nuvem dilatada; bit2 cirrus; bit3 nuvem; bit4 sombra de nuvem
-    classify: v => (v & 1) ? 'nodata' : (v & 0b11110) ? 'cloud' : 'clear',
+    classify: landsatQA,
     satellite: it => (it.properties.platform || '').replace('landsat-', 'Landsat-'),
-    scaleFor: (it, b) => b.name === 'thermal' ? { scale: 0.00341802, offset: 149.0, unit: 'K' } : { scale: 0.0000275, offset: -0.2 },
+    scaleFor: landsatScale,
     dedupeKey: it => it.id,
     version: it => 0,
     composites: [
@@ -63,10 +81,143 @@ const SENSORS = {
       { label: 'Agricultura', b: ['swir_1', 'nir', 'blue'] },
     ],
   },
+
+  // ---------- secundários ----------
+  landsat457: {
+    label: 'Landsat 4/5/7 (desde 1982)', short: 'LS457', group: 'secondary', res: 30,
+    stac: PC_STAC, collections: ['landsat-c2-l2'],
+    query: { platform: { in: ['landsat-4', 'landsat-5', 'landsat-7'] } },
+    dtype: 'uint16', nodata: 0, refAsset: 'red', maskAsset: 'qa_pixel',
+    bands: [
+      { asset: 'blue',   name: 'blue',    code: 'SR_B1' },
+      { asset: 'green',  name: 'green',   code: 'SR_B2' },
+      { asset: 'red',    name: 'red',     code: 'SR_B3' },
+      { asset: 'nir08',  name: 'nir',     code: 'SR_B4' },
+      { asset: 'swir16', name: 'swir_1',  code: 'SR_B5' },
+      { asset: 'swir22', name: 'swir_2',  code: 'SR_B7' },
+      { asset: 'lwir',   name: 'thermal', code: 'ST_B6' },
+    ],
+    classify: landsatQA, // Landsat 7 após 2003 tem faixas sem dado (SLC-off): aparecem como "sem dado"
+    satellite: it => (it.properties.platform || '').replace('landsat-', 'Landsat-'),
+    scaleFor: landsatScale,
+    dedupeKey: it => it.id,
+    version: it => 0,
+    composites: [
+      { label: 'Cor verdadeira', b: ['red', 'green', 'blue'] },
+      { label: 'Falsa cor', b: ['nir', 'red', 'green'] },
+      { label: 'Agricultura', b: ['swir_1', 'nir', 'blue'] },
+    ],
+  },
+  hls: {
+    label: 'HLS (Landsat + Sentinel-2 harmonizados)', short: 'HLS', group: 'secondary', res: 30,
+    stac: PC_STAC, collections: ['hls2-s30', 'hls2-l30'],
+    dtype: 'int16', nodata: -9999, refAsset: 'B04', maskAsset: 'Fmask',
+    // só as bandas comuns às duas coleções; o asset muda entre S30 (Sentinel) e L30 (Landsat)
+    bands: [
+      { asset: 'B01', name: 'coastal', code: 'B01' },
+      { asset: 'B02', name: 'blue',    code: 'B02' },
+      { asset: 'B03', name: 'green',   code: 'B03' },
+      { asset: 'B04', name: 'red',     code: 'B04' },
+      { asset: { 'hls2-s30': 'B8A', 'hls2-l30': 'B05' }, name: 'nir',    code: 'S30:B8A L30:B05' },
+      { asset: { 'hls2-s30': 'B11', 'hls2-l30': 'B06' }, name: 'swir_1', code: 'S30:B11 L30:B06' },
+      { asset: { 'hls2-s30': 'B12', 'hls2-l30': 'B07' }, name: 'swir_2', code: 'S30:B12 L30:B07' },
+    ],
+    // Fmask: 255 sem dado; bit1 nuvem, bit2 adjacente a nuvem/sombra, bit3 sombra
+    classify: v => (!isNum(v) || v === 255) ? 'nodata' : (v & 0b1110) ? 'cloud' : 'clear',
+    satellite: it => 'HLS ' + platformLabel(it),
+    scaleFor: () => ({ scale: 0.0001, offset: 0 }),
+    dedupeKey: it => it.id,
+    version: it => 0,
+    composites: [
+      { label: 'Cor verdadeira', b: ['red', 'green', 'blue'] },
+      { label: 'Falsa cor', b: ['nir', 'red', 'green'] },
+      { label: 'Agricultura', b: ['swir_1', 'nir', 'blue'] },
+    ],
+  },
+  sentinel1: {
+    label: 'Sentinel-1 radar (atravessa nuvem)', short: 'S1', group: 'secondary', res: 10,
+    stac: PC_STAC, collections: ['sentinel-1-rtc'],
+    dtype: 'float32', nodata: -32768, refAsset: 'vv', maskAsset: 'vv', cloudFree: true,
+    bands: [
+      { asset: 'vv', name: 'vv', code: 'VV' },
+      { asset: 'vh', name: 'vh', code: 'VH' },
+    ],
+    classify: v => (!isNum(v) || v === -32768) ? 'nodata' : 'clear',
+    satellite: platformLabel,
+    scaleFor: () => ({ scale: 1, offset: 0, unit: 'gamma0 linear' }),
+    dedupeKey: it => it.id,
+    version: it => 0,
+    composites: [{ label: 'Radar (VV, VH, VV)', b: ['vv', 'vh', 'vv'] }],
+  },
+  palsar: {
+    label: 'ALOS-2 PALSAR-2 radar (mosaico anual)', short: 'PALSAR', group: 'secondary', res: 25,
+    stac: PC_STAC, collections: ['alos-palsar-mosaic'],
+    dtype: 'uint16', nodata: 0, refAsset: 'HH', maskAsset: 'mask', cloudFree: true,
+    mosaic: true, minWindowDays: 3650, // mosaicos anuais (2015 em diante); acha o ano mais próximo
+    bands: [
+      { asset: 'HH', name: 'hh', code: 'HH' },
+      { asset: 'HV', name: 'hv', code: 'HV' },
+    ],
+    // mask: 0 sem dado; demais (terra, água, layover, sombra) contam como dado
+    classify: v => (!isNum(v) || v === 0) ? 'nodata' : 'clear',
+    satellite: () => 'ALOS-2',
+    scaleFor: () => ({ scale: 1, offset: 0, unit: 'DN; gamma0 (dB) = 10*log10(DN^2) - 83' }),
+    dedupeKey: it => it.id,
+    version: it => 0,
+    composites: [{ label: 'Radar (HH, HV, HH)', b: ['hh', 'hv', 'hh'] }],
+  },
+  dem: {
+    label: 'Copernicus DEM (altitude, 30 m)', short: 'DEM', group: 'secondary', res: 30,
+    stac: PC_STAC, collections: ['cop-dem-glo-30'],
+    dtype: 'float32', nodata: -9999, refAsset: 'data', maskAsset: 'data',
+    mosaic: true, static: true, cloudFree: true,
+    bands: [{ asset: 'data', name: 'elevation', code: 'DEM' }],
+    classify: v => isNum(v) ? 'clear' : 'nodata',
+    satellite: () => 'Copernicus DEM',
+    scaleFor: () => ({ scale: 1, offset: 0, unit: 'm' }),
+    dedupeKey: it => it.id,
+    version: it => 0,
+    composites: [{ label: 'Altitude', b: ['elevation', 'elevation', 'elevation'] }],
+  },
+  modis: {
+    label: 'MODIS (250 m, composição de 8 dias)', short: 'MODIS', group: 'secondary', res: 250,
+    stac: PC_STAC, collections: ['modis-09Q1-061'],
+    dtype: 'int16', nodata: -28672, refAsset: 'sur_refl_b01', maskAsset: 'sur_refl_state_250m',
+    mosaic: true, groupKey: it => it.properties.start_datetime.slice(0, 10) + '|' + it.properties.platform,
+    bands: [
+      { asset: 'sur_refl_b01', name: 'red', code: 'B01' },
+      { asset: 'sur_refl_b02', name: 'nir', code: 'B02' },
+    ],
+    // state: 65535 sem dado; bits 0-1 estado da nuvem (1 nublado, 2 misto); bit 2 sombra
+    classify: v => (!isNum(v) || v === 65535) ? 'nodata' : ((v & 3) === 1 || (v & 3) === 2 || (v & 4)) ? 'cloud' : 'clear',
+    satellite: it => it.properties.platform === 'aqua' ? 'Aqua' : 'Terra',
+    scaleFor: () => ({ scale: 0.0001, offset: 0 }),
+    dedupeKey: it => it.id,
+    version: it => 0,
+    composites: [{ label: 'Falsa cor', b: ['nir', 'red', 'red'] }],
+  },
 };
 
+const DTYPES = {
+  uint16: { Array: Uint16Array, bits: 16, format: 1 },
+  int16: { Array: Int16Array, bits: 16, format: 2 },
+  float32: { Array: Float32Array, bits: 32, format: 3 },
+};
+
+// asset de uma banda (ou do refAsset/maskAsset) para um item, considerando a coleção
+function assetOf(spec, item) {
+  const a = spec && typeof spec === 'object' && !Array.isArray(spec) && 'asset' in spec ? spec.asset : spec;
+  return typeof a === 'object' ? a[item.collection] : a;
+}
+
 // ---------- projeções ----------
-function ensureProj(epsg) {
+// crs: número EPSG ou MODIS_SINU (sinusoidal do MODIS, sem código EPSG)
+function ensureProj(crs) {
+  if (crs === MODIS_SINU) {
+    if (!proj4.defs(MODIS_SINU)) proj4.defs(MODIS_SINU, '+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +R=6371007.181 +units=m +no_defs');
+    return MODIS_SINU;
+  }
+  const epsg = crs;
   const key = 'EPSG:' + epsg;
   if (proj4.defs(key)) return key;
   let def = null;
@@ -79,6 +230,8 @@ function ensureProj(epsg) {
   proj4.defs(key, def);
   return key;
 }
+const isGeographic = crs => crs === 4326 || crs === 4674;
+const crsLabel = crs => crs === MODIS_SINU ? 'Sinusoidal (MODIS)' : 'EPSG:' + crs;
 
 // ---------- leitura dos arquivos vetoriais ----------
 // Aceita um GeoJSON, um .zip com shapefile, ou os arquivos soltos do shapefile (.shp + .dbf + .prj [+ .cpg]).
@@ -148,8 +301,8 @@ function parseGeoJSON(obj) {
   return { polygons, bboxLL: [minx, miny, maxx, maxy], nFeatures: nFeat, nPolygons: polygons.length, ignored, srcEpsg };
 }
 
-function projectPolys(polygons, epsg) {
-  const k = ensureProj(epsg);
+function projectPolys(polygons, crs) {
+  const k = ensureProj(crs);
   return polygons.map(p => p.map(r => r.map(c => proj4('EPSG:4326', k, [c[0], c[1]]))));
 }
 function boundsOf(polys) {
@@ -207,31 +360,43 @@ function rasterize(polysPx, W, H) {
 }
 
 // ---------- STAC ----------
-let pcToken = null;
-async function signHref(href, sensor) {
-  const s = SENSORS[sensor];
-  if (!s.sign) return href;
-  if (!pcToken || Date.parse(pcToken.expiry) - Date.now() < 5 * 60e3) {
+// Arquivos no Azure Blob (Planetary Computer) precisam de token SAS da conta/container do arquivo.
+const pcTokens = new Map();
+async function signHref(href) {
+  const m = href.match(/^https:\/\/([^.]+)\.blob\.core\.windows\.net\/([^/?]+)\//);
+  if (!m) return href;
+  const key = m[1] + '/' + m[2];
+  let tok = pcTokens.get(key);
+  if (!tok || Date.parse(tok.expiry) - Date.now() < 5 * 60e3) {
+    tok = null;
     let lastErr;
     for (let i = 0; i < 6; i++) {
       try {
-        const r = await fetch(s.tokenUrl);
-        if (r.ok) { const j = await r.json(); pcToken = { token: j.token, expiry: j['msft:expiry'] }; break; }
+        const r = await fetch('https://planetarycomputer.microsoft.com/api/sas/v1/token/' + key);
+        if (r.ok) { const j = await r.json(); tok = { token: j.token, expiry: j['msft:expiry'] }; break; }
         lastErr = new Error('Token do Planetary Computer: HTTP ' + r.status);
       } catch (e) { lastErr = e; }
       await new Promise(res => setTimeout(res, 2000 * (i + 1)));
     }
-    if (!pcToken) throw lastErr;
+    if (!tok) throw lastErr;
+    pcTokens.set(key, tok);
   }
-  return href + (href.includes('?') ? '&' : '?') + pcToken.token;
+  return href + (href.includes('?') ? '&' : '?') + tok.token;
 }
 
 function isoDay(d) { return d.toISOString().slice(0, 10); }
 function addDays(day, n) { const d = new Date(day + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return isoDay(d); }
 
+// Intervalo de datas da busca (produtos anuais exigem janela mínima maior)
+function searchRange(sensor, day, win) {
+  const w = Math.max(win, SENSORS[sensor].minWindowDays || 0);
+  return [addDays(day, -w), addDays(day, w)];
+}
+
 async function stacSearch(sensor, bboxLL, startDay, endDay) {
   const s = SENSORS[sensor];
-  let body = { collections: [s.collection], bbox: bboxLL, datetime: `${startDay}T00:00:00Z/${endDay}T23:59:59Z`, limit: 100 };
+  let body = { collections: s.collections, bbox: bboxLL, limit: 100 };
+  if (!s.static) body.datetime = `${startDay}T00:00:00Z/${endDay}T23:59:59Z`;
   if (s.query) body.query = s.query;
   let url = s.stac, method = 'POST';
   const items = [];
@@ -250,7 +415,18 @@ async function stacSearch(sensor, bboxLL, startDay, endDay) {
   return items;
 }
 
+// Data de um item e distância em dias até a data alvo (0 se a data alvo cai no período do item)
+function itemDates(it, targetDay) {
+  const p = it.properties;
+  const start = (p.start_datetime || p.datetime).slice(0, 10), end = (p.end_datetime || p.datetime || p.start_datetime).slice(0, 10);
+  const day = (p.datetime || p.start_datetime).slice(0, 10);
+  const t = Date.parse(targetDay + 'T00:00:00Z'), d = s => Date.parse(s + 'T00:00:00Z');
+  const delta = t < d(start) ? Math.round((d(start) - t) / 86400e3) : t > d(end) ? Math.round((d(end) - t) / 86400e3) : 0;
+  return { day, delta };
+}
+
 // Ordena: anteriores (≤ data X) do mais próximo ao mais distante; depois posteriores.
+// Sensores com mosaic juntam os tiles da mesma data num único candidato.
 function orderCandidates(items, sensor, targetDay, geo) {
   const s = SENSORS[sensor];
   const best = new Map();
@@ -258,16 +434,24 @@ function orderCandidates(items, sensor, targetDay, geo) {
     const k = s.dedupeKey(it), cur = best.get(k);
     if (!cur || s.version(it) > s.version(cur)) best.set(k, it);
   }
+  let groups = [...best.values()].map(it => [it]);
+  if (s.mosaic) {
+    const byKey = new Map();
+    for (const it of best.values()) {
+      const k = s.groupKey ? s.groupKey(it) : itemDates(it, targetDay).day;
+      byKey.set(k, [...(byKey.get(k) || []), it]);
+    }
+    groups = [...byKey.values()];
+  }
   const [a, b, c, d] = geo.bboxLL;
   const corners = [[a, b], [a, d], [c, b], [c, d]];
-  const t0 = Date.parse(targetDay + 'T00:00:00Z');
-  return [...best.values()].map(it => {
-    const day = it.properties.datetime.slice(0, 10);
-    const delta = Math.round((Date.parse(day + 'T00:00:00Z') - t0) / 86400e3);
+  return groups.map(items => {
+    const it = items[0];
+    const { day, delta } = itemDates(it, targetDay);
     return {
-      item: it, day, delta,
+      item: it, items, day, delta,
       sceneCloud: it.properties['eo:cloud_cover'],
-      covers: footprintContains(it.geometry, corners),
+      covers: corners.every(pt => items.some(i => footprintContains(i.geometry, [pt]))),
       satellite: s.satellite(it),
     };
   }).sort((x, y) =>
@@ -278,58 +462,78 @@ function orderCandidates(items, sensor, targetDay, geo) {
 function gridOf(img) {
   let [ox, oy] = img.getOrigin();
   const [rx, ry] = img.getResolution();
-  // Landsat usa RasterPixelIsPoint: o tiepoint é o centro do pixel, então desloca meio pixel (como o GDAL faz)
+  // RasterPixelIsPoint (Landsat, DEM): o tiepoint é o centro do pixel, então desloca meio pixel (como o GDAL faz)
   const gk = img.getGeoKeys ? img.getGeoKeys() : img.geoKeys;
   if (gk && gk.GTRasterTypeGeoKey === 2) { ox -= rx / 2; oy -= ry / 2; }
   return { ox, oy, rx, ry: Math.abs(ry), w: img.getWidth(), h: img.getHeight() };
 }
 function epsgOf(img, item) {
   const gk = img.getGeoKeys ? img.getGeoKeys() : img.geoKeys;
+  if (gk && gk.ProjCoordTransGeoKey === 24 && Math.round(gk.GeogSemiMajorAxisGeoKey) === 6371007) return MODIS_SINU;
   const e = gk && (gk.ProjectedCSTypeGeoKey || gk.GeographicTypeGeoKey);
   if (e && e !== 32767) return e;
   const p = item.properties['proj:epsg'] || parseInt(String(item.properties['proj:code'] || '').split(':')[1], 10);
   if (!p) throw new Error('Não foi possível descobrir o EPSG da cena ' + item.id);
   return p;
 }
-async function openCog(item, assetKey, sensor) {
+async function openCog(item, assetKey) {
   const a = item.assets[assetKey];
   if (!a) throw new Error(`A cena ${item.id} não tem o asset "${assetKey}".`);
-  const tif = await GeoTIFF.fromUrl(await signHref(a.href, sensor), { allowFullFile: false });
+  const tif = await GeoTIFF.fromUrl(await signHref(a.href), { allowFullFile: false });
   return tif.getImage(0);
 }
-// Lê uma janela [c0,r0,c1,r1) da imagem; o que cai fora da imagem recebe `fill`.
-async function readWindow(img, g, c0, r0, c1, r1, fill) {
-  const W = c1 - c0, H = r1 - r0, out = new Uint16Array(W * H).fill(fill);
-  const a0 = Math.max(0, c0), b0 = Math.max(0, r0), a1 = Math.min(g.w, c1), b1 = Math.min(g.h, r1);
-  if (a1 <= a0 || b1 <= b0) return out;
-  const ras = await img.readRasters({ window: [a0, b0, a1, b1], samples: [0] });
-  const src = ras[0], sw = a1 - a0;
-  for (let r = b0; r < b1; r++) {
-    const so = (r - b0) * sw, doff = (r - r0) * W + (a0 - c0);
-    for (let c = 0; c < sw; c++) out[doff + c] = src[so + c];
+
+// Reamostra (vizinho mais próximo) uma imagem para a grade T = {X0, Y0, rx, ry, W, H}, preenchendo em `out`
+// só os pixels que ainda estão vazios (isEmpty) com valores válidos da imagem (isValid). Usado para mosaicar tiles.
+async function sampleInto(img, T, out, isEmpty, isValid) {
+  const bg = gridOf(img);
+  const colMap = new Int32Array(T.W), rowMap = new Int32Array(T.H);
+  for (let i = 0; i < T.W; i++) colMap[i] = Math.floor((T.X0 + (i + 0.5) * T.rx - bg.ox) / bg.rx);
+  for (let j = 0; j < T.H; j++) rowMap[j] = Math.floor((bg.oy - (T.Y0 - (j + 0.5) * T.ry)) / bg.ry);
+  const a0 = Math.max(0, colMap[0]), a1 = Math.min(bg.w, colMap[T.W - 1] + 1);
+  const b0 = Math.max(0, rowMap[0]), b1 = Math.min(bg.h, rowMap[T.H - 1] + 1);
+  if (a1 <= a0 || b1 <= b0) return;
+  const src = (await img.readRasters({ window: [a0, b0, a1, b1], samples: [0] }))[0], sw = a1 - a0;
+  for (let j = 0; j < T.H; j++) {
+    const r = rowMap[j];
+    if (r < b0 || r >= b1) continue;
+    const so = (r - b0) * sw;
+    for (let i = 0; i < T.W; i++) {
+      const c = colMap[i], k = j * T.W + i;
+      if (c < a0 || c >= a1 || !isEmpty(out[k])) continue;
+      const v = src[so + c - a0];
+      if (isValid(v)) out[k] = v;
+    }
   }
-  return out;
 }
+
+const itemsOf = cand => cand.items || [cand.item];
 
 // Verifica nuvem/sombra e ausência de dado dentro dos talhões usando a máscara da cena
 async function checkCandidate(cand, sensor, geo) {
-  const s = SENSORS[sensor];
-  const img = await openCog(cand.item, s.maskAsset, sensor);
-  const g = gridOf(img), epsg = epsgOf(img, cand.item);
-  const polys = projectPolys(geo.polygons, epsg);
+  const s = SENSORS[sensor], items = itemsOf(cand);
+  const img0 = await openCog(items[0], assetOf(s.maskAsset, items[0]));
+  const g = gridOf(img0), crs = epsgOf(img0, items[0]);
+  const polys = projectPolys(geo.polygons, crs);
   const [minx, miny, maxx, maxy] = boundsOf(polys);
+  // grade da máscara do 1º item, recortada nos talhões (+1 px)
   const c0 = Math.floor((minx - g.ox) / g.rx) - 1, c1 = Math.ceil((maxx - g.ox) / g.rx) + 1;
   const r0 = Math.floor((g.oy - maxy) / g.ry) - 1, r1 = Math.ceil((g.oy - miny) / g.ry) + 1;
-  const W = c1 - c0, H = r1 - r0;
-  const OUT = 65535;
-  const data = await readWindow(img, g, c0, r0, c1, r1, OUT);
-  const polysPx = polys.map(p => p.map(r => r.map(([x, y]) => [(x - g.ox) / g.rx - c0, (g.oy - y) / g.ry - r0])));
-  const mask = rasterize(polysPx, W, H);
+  const T = { X0: g.ox + c0 * g.rx, Y0: g.oy - r0 * g.ry, rx: g.rx, ry: g.ry, W: c1 - c0, H: r1 - r0 };
+  // NaN = fora de todas as cenas; o valor de nodata da máscara é tratado pelo classify
+  const data = new Float32Array(T.W * T.H).fill(NaN);
+  const empty = v => Number.isNaN(v) || s.classify(v) === 'nodata';
+  for (let i = 0; i < items.length; i++) {
+    const img = i === 0 ? img0 : await openCog(items[i], assetOf(s.maskAsset, items[i]));
+    if (i > 0 && epsgOf(img, items[i]) !== crs) continue;
+    await sampleInto(img, T, data, empty, v => s.classify(v) !== 'nodata');
+  }
+  const polysPx = polys.map(p => p.map(r => r.map(([x, y]) => [(x - T.X0) / T.rx, (T.Y0 - y) / T.ry])));
+  const mask = rasterize(polysPx, T.W, T.H);
   let n = 0, cloud = 0, nodata = 0;
   for (let i = 0; i < mask.length; i++) if (mask[i]) {
     n++;
-    const v = data[i];
-    const k = v === OUT ? 'nodata' : s.classify(v);
+    const k = s.classify(data[i]);
     if (k === 'cloud') cloud++; else if (k === 'nodata') nodata++;
   }
   return { n, cloudPct: 100 * cloud / n, nodataPct: 100 * nodata / n };
@@ -343,44 +547,67 @@ async function pool(tasks, k) {
 
 // Baixa todas as bandas no recorte (bbox dos talhões + buffer), alinhadas à grade da banda de referência
 async function loadImage(cand, sensor, geo, bufferM, onProgress) {
-  const s = SENSORS[sensor], item = cand.item;
-  const ref = await openCog(item, s.refAsset, sensor);
-  const g = gridOf(ref), epsg = epsgOf(ref, item), res = g.rx;
-  const polys = projectPolys(geo.polygons, epsg);
+  const s = SENSORS[sensor], items = itemsOf(cand), item = items[0], dt = DTYPES[s.dtype];
+  const ref = await openCog(item, assetOf(s.refAsset, item));
+  const g = gridOf(ref), crs = epsgOf(ref, item);
+  const polys = projectPolys(geo.polygons, crs);
   const [minx, miny, maxx, maxy] = boundsOf(polys);
-  const c0 = Math.floor((minx - bufferM - g.ox) / res), c1 = Math.ceil((maxx + bufferM - g.ox) / res);
-  const r0 = Math.floor((g.oy - (maxy + bufferM)) / res), r1 = Math.ceil((g.oy - (miny - bufferM)) / res);
-  const W = c1 - c0, H = r1 - r0, X0 = g.ox + c0 * res, Y0 = g.oy - r0 * res;
-  if (W * H * s.bands.length * 2 > 1.5e9) throw new Error('Área grande demais para montar no navegador. Reduza o buffer ou divida o GeoJSON.');
-  const bands = s.bands.filter(b => item.assets[b.asset]);
+  // buffer em metros; em CRS geográfico converte para graus na latitude da área
+  let bx = bufferM, by = bufferM;
+  if (isGeographic(crs)) { by = bufferM / 110574; bx = bufferM / (111320 * Math.cos((miny + maxy) / 2 * Math.PI / 180)); }
+  const c0 = Math.floor((minx - bx - g.ox) / g.rx), c1 = Math.ceil((maxx + bx - g.ox) / g.rx);
+  const r0 = Math.floor((g.oy - (maxy + by)) / g.ry), r1 = Math.ceil((g.oy - (miny - by)) / g.ry);
+  const T = { X0: g.ox + c0 * g.rx, Y0: g.oy - r0 * g.ry, rx: g.rx, ry: g.ry, W: c1 - c0, H: r1 - r0 };
+  const bands = s.bands.filter(b => item.assets[assetOf(b, item)]);
+  if (T.W * T.H * bands.length * dt.bits / 8 > 1.5e9) throw new Error('Área grande demais para montar no navegador. Reduza o buffer ou divida o GeoJSON.');
+  const nod = s.nodata;
+  const isEmpty = v => v === nod || Number.isNaN(v);
+  const isValid = v => v !== nod && !Number.isNaN(v);
   let done = 0;
   const datas = await pool(bands.map(b => async () => {
-    const img = b.asset === s.refAsset ? ref : await openCog(item, b.asset, sensor);
-    const bg = gridOf(img);
-    const colMap = new Int32Array(W), rowMap = new Int32Array(H);
-    for (let i = 0; i < W; i++) colMap[i] = Math.floor((X0 + (i + 0.5) * res - bg.ox) / bg.rx);
-    for (let j = 0; j < H; j++) rowMap[j] = Math.floor((bg.oy - (Y0 - (j + 0.5) * res)) / bg.ry);
-    const sc0 = colMap[0], sc1 = colMap[W - 1] + 1, sr0 = rowMap[0], sr1 = rowMap[H - 1] + 1;
-    const src = await readWindow(img, bg, sc0, sr0, sc1, sr1, 0);
-    const sw = sc1 - sc0, out = new Uint16Array(W * H);
-    for (let j = 0; j < H; j++) {
-      const so = (rowMap[j] - sr0) * sw;
-      for (let i = 0; i < W; i++) out[j * W + i] = src[so + colMap[i] - sc0];
+    const out = new dt.Array(T.W * T.H).fill(nod);
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i], key = assetOf(b, it);
+      if (!it.assets[key]) continue;
+      const img = i === 0 && key === assetOf(s.refAsset, item) ? ref : await openCog(it, key);
+      if (i > 0 && epsgOf(img, it) !== crs) continue;
+      await sampleInto(img, T, out, isEmpty, isValid);
     }
     onProgress && onProgress(++done, bands.length, b.name);
     return out;
   }), 4);
-  const polysPx = polys.map(p => p.map(r => r.map(([x, y]) => [(x - X0) / res, (Y0 - y) / res])));
+  const polysPx = polys.map(p => p.map(r => r.map(([x, y]) => [(x - T.X0) / T.rx, (T.Y0 - y) / T.ry])));
   return {
-    W, H, X0, Y0, res, epsg, polysPx,
+    W: T.W, H: T.H, X0: T.X0, Y0: T.Y0, res: T.rx, resY: T.ry, epsg: crs, dtype: s.dtype, nodata: nod, polysPx,
     bands: bands.map((b, i) => ({ ...b, ...s.scaleFor(item, b), data: datas[i] })),
   };
 }
 
-// ---------- escrita do GeoTIFF (uint16, bandas separadas, sem compressão) ----------
+// ---------- escrita do GeoTIFF (bandas separadas, sem compressão) ----------
 function xmlEsc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+// GeoKeys: [chave, local (0 = valor curto, 34736 = double), valor]
+function geoKeysFor(crs) {
+  let keys;
+  if (crs === MODIS_SINU) {
+    keys = [[1024, 0, 1], [1025, 0, 1], [2048, 0, 32767], [2050, 0, 32767], [2054, 0, 9102], [2056, 0, 32767],
+      [2057, 34736, 6371007.181], [2058, 34736, 6371007.181], [3072, 0, 32767], [3074, 0, 32767], [3075, 0, 24],
+      [3076, 0, 9001], [3082, 34736, 0], [3083, 34736, 0], [3088, 34736, 0]];
+  } else if (isGeographic(crs)) {
+    keys = [[1024, 0, 2], [1025, 0, 1], [2048, 0, crs], [2054, 0, 9102]];
+  } else {
+    keys = [[1024, 0, 1], [1025, 0, 1], [3072, 0, crs], [3076, 0, 9001]];
+  }
+  const dir = [1, 1, 0, keys.length], doubles = [];
+  for (const [k, loc, v] of keys) {
+    if (loc) { dir.push(k, loc, 1, doubles.length); doubles.push(v); } else dir.push(k, 0, 1, v);
+  }
+  return { dir, doubles };
+}
+
 function buildGeoTIFF(img, meta) {
   const { W, H, X0, Y0, res, epsg, bands } = img, n = bands.length;
+  const resY = img.resY || res, dt = DTYPES[img.dtype || 'uint16'], nodata = img.nodata ?? 0;
   let xml = '<GDALMetadata>\n';
   for (const [k, v] of Object.entries(meta)) xml += `  <Item name="${xmlEsc(k)}">${xmlEsc(v)}</Item>\n`;
   bands.forEach((b, i) => {
@@ -388,25 +615,24 @@ function buildGeoTIFF(img, meta) {
     xml += `  <Item name="BAND_CODE" sample="${i}">${xmlEsc(b.code)}</Item>\n`;
     xml += `  <Item name="PHYSICAL_SCALE" sample="${i}">${b.scale}</Item>\n`;
     xml += `  <Item name="PHYSICAL_OFFSET" sample="${i}">${b.offset}</Item>\n`;
-    if (b.unit) xml += `  <Item name="PHYSICAL_UNIT" sample="${i}">${b.unit}</Item>\n`;
+    if (b.unit) xml += `  <Item name="PHYSICAL_UNIT" sample="${i}">${xmlEsc(b.unit)}</Item>\n`;
   });
   xml += '</GDALMetadata>\0';
-  const geoKeys = [1, 1, 0, 4, 1024, 0, 1, 1, 1025, 0, 1, 1, 3072, 0, 1, epsg, 3076, 0, 1, 9001];
-  const isGeographic = epsg === 4326 || epsg === 4674;
-  if (isGeographic) geoKeys.splice(4, 16, 1024, 0, 1, 2, 1025, 0, 1, 1, 2048, 0, 1, epsg, 2054, 0, 1, 9102);
+  const gk = geoKeysFor(epsg);
   const enc = new TextEncoder();
   // tag: [id, type, values]; type 3 SHORT, 4 LONG, 12 DOUBLE, 2 ASCII
   const SIZE = { 2: 1, 3: 2, 4: 4, 12: 8 };
-  const planeBytes = W * H * 2;
+  const planeBytes = W * H * dt.bits / 8;
   const tags = [
-    [256, 4, [W]], [257, 4, [H]], [258, 3, Array(n).fill(16)], [259, 3, [1]], [262, 3, [1]],
+    [256, 4, [W]], [257, 4, [H]], [258, 3, Array(n).fill(dt.bits)], [259, 3, [1]], [262, 3, [1]],
     [273, 4, Array(n).fill(0)], [277, 3, [n]], [278, 4, [H]], [279, 4, Array(n).fill(planeBytes)],
     [284, 3, [2]],
     ...(n > 1 ? [[338, 3, Array(n - 1).fill(0)]] : []),
-    [339, 3, Array(n).fill(1)],
-    [33550, 12, [res, res, 0]], [33922, 12, [0, 0, 0, X0, Y0, 0]],
-    [34735, 3, geoKeys],
-    [42112, 2, enc.encode(xml)], [42113, 2, enc.encode('0\0')],
+    [339, 3, Array(n).fill(dt.format)],
+    [33550, 12, [res, resY, 0]], [33922, 12, [0, 0, 0, X0, Y0, 0]],
+    [34735, 3, gk.dir],
+    ...(gk.doubles.length ? [[34736, 12, gk.doubles]] : []),
+    [42112, 2, enc.encode(xml)], [42113, 2, enc.encode(String(nodata) + '\0')],
   ];
   const ifdSize = 2 + tags.length * 12 + 4;
   let extra = 8 + ifdSize;
@@ -421,7 +647,7 @@ function buildGeoTIFF(img, meta) {
   placed.find(t => t.id === 273).vals = stripOffsets;
   const total = dataStart + n * planeBytes;
   if (total > 4294967295) throw new Error('Arquivo maior que 4 GB; reduza a área.');
-  const buf = new ArrayBuffer(total), dv = new DataView(buf), u8 = new Uint8Array(buf);
+  const buf = new ArrayBuffer(total), dv = new DataView(buf);
   dv.setUint16(0, 0x4949); dv.setUint16(2, 42, true); dv.setUint32(4, 8, true);
   dv.setUint16(8, tags.length, true);
   const writeVals = (pos, t) => {
@@ -439,17 +665,14 @@ function buildGeoTIFF(img, meta) {
     if (t.off === null) writeVals(e + 8, t); else { dv.setUint32(e + 8, t.off, true); writeVals(t.off, t); }
   });
   dv.setUint32(10 + tags.length * 12, 0, true);
-  bands.forEach((b, i) => {
-    const plane = new Uint16Array(buf, stripOffsets[i], W * H);
-    plane.set(b.data);
-  });
+  bands.forEach((b, i) => new dt.Array(buf, stripOffsets[i], W * H).set(b.data));
   return buf;
 }
 
 // ---------- realce para visualização ----------
-function percentiles(data, lo, hi) {
+function percentiles(data, lo, hi, nodata = 0) {
   const step = Math.max(1, Math.floor(data.length / 200000)), s = [];
-  for (let i = 0; i < data.length; i += step) if (data[i]) s.push(data[i]);
+  for (let i = 0; i < data.length; i += step) { const v = data[i]; if (v !== nodata && !Number.isNaN(v)) s.push(v); }
   if (!s.length) return [0, 1];
   s.sort((a, b) => a - b);
   const q = p => s[Math.min(s.length - 1, Math.floor(p * (s.length - 1)))];
@@ -463,4 +686,9 @@ function zipFile(name, buf) {
     fflate.zip({ [name]: [new Uint8Array(buf), { level: 6 }] }, (err, out) => err ? reject(err) : resolve(out)));
 }
 
-globalThis.Core = { SENSORS, readVectorFiles, zipFile, parseGeoJSON, stacSearch, orderCandidates, checkCandidate, loadImage, buildGeoTIFF, percentiles, addDays, isoDay };
+globalThis.Core = {
+  SENSORS, MODIS_SINU, readVectorFiles, zipFile, parseGeoJSON, stacSearch, searchRange, orderCandidates, checkCandidate, loadImage,
+  buildGeoTIFF, percentiles, addDays, isoDay, crsLabel, isGeographic,
+  // expostos para os testes
+  ensureProj, projectPolys, pointInRing, footprintContains, rasterize, signHref, assetOf, gridOf, epsgOf, itemDates,
+};
