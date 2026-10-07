@@ -1,6 +1,7 @@
 // ======================= Núcleo (sem DOM) =======================
 // Cada sensor descreve onde buscar (STAC), quais bandas baixar e como achar nuvem/sem dado.
 //   group       'main' (sempre visível) ou 'secondary' (em "Outros")
+//   res/since/about  resolução (m), início dos dados e para que o satélite foi criado (mostrados na escolha)
 //   collections coleções STAC; o asset de uma banda pode variar por coleção ({ coleção: asset })
 //   dtype       tipo do .tif gerado ('uint16' | 'int16' | 'float32'); nodata = valor sem dado
 //   maskAsset   raster usado para nuvem/sem dado; classify(v) => 'clear' | 'cloud' | 'nodata' (v NaN = fora da cena)
@@ -20,7 +21,8 @@ const platformLabel = it => (it.properties.platform || '').replace(/^(\w)/, c =>
 
 const SENSORS = {
   sentinel2: {
-    label: 'Sentinel-2 L2A', short: 'S2', group: 'main', res: 10,
+    label: 'Sentinel-2 L2A', short: 'S2', group: 'main', res: 10, since: 2015,
+    about: 'Missão europeia (Copernicus) criada para monitorar vegetação, agricultura e uso do solo. Imagem a cada ~5 dias.',
     stac: ES_STAC, collections: ['sentinel-2-l2a'],
     dtype: 'uint16', nodata: 0, refAsset: 'blue', maskAsset: 'scl',
     bands: [
@@ -55,7 +57,8 @@ const SENSORS = {
     ],
   },
   landsat: {
-    label: 'Landsat 8/9', short: 'LS', group: 'main', res: 30,
+    label: 'Landsat 8/9', short: 'LS', group: 'main', res: 30, since: 2013,
+    about: 'Missão da NASA/USGS para acompanhar mudanças na superfície da Terra; tem banda térmica. Imagem a cada ~8 dias.',
     stac: PC_STAC, collections: ['landsat-c2-l2'],
     query: { platform: { in: ['landsat-8', 'landsat-9'] } },
     dtype: 'uint16', nodata: 0, refAsset: 'red', maskAsset: 'qa_pixel',
@@ -84,7 +87,8 @@ const SENSORS = {
 
   // ---------- secundários ----------
   landsat457: {
-    label: 'Landsat 4/5/7 (desde 1982)', short: 'LS457', group: 'secondary', res: 30,
+    label: 'Landsat 4/5/7', short: 'LS457', group: 'secondary', res: 30, since: 1982,
+    about: 'Gerações anteriores do Landsat. Servem para ver a área antes de 2013, como plantios antigos.',
     stac: PC_STAC, collections: ['landsat-c2-l2'],
     query: { platform: { in: ['landsat-4', 'landsat-5', 'landsat-7'] } },
     dtype: 'uint16', nodata: 0, refAsset: 'red', maskAsset: 'qa_pixel',
@@ -109,7 +113,8 @@ const SENSORS = {
     ],
   },
   hls: {
-    label: 'HLS (Landsat + Sentinel-2 harmonizados)', short: 'HLS', group: 'secondary', res: 30,
+    label: 'HLS', short: 'HLS', group: 'secondary', res: 30, since: 2013,
+    about: 'Produto da NASA que põe Landsat e Sentinel-2 na mesma grade e calibração, para ter mais datas comparáveis.',
     stac: PC_STAC, collections: ['hls2-s30', 'hls2-l30'],
     dtype: 'int16', nodata: -9999, refAsset: 'B04', maskAsset: 'Fmask',
     // só as bandas comuns às duas coleções; o asset muda entre S30 (Sentinel) e L30 (Landsat)
@@ -135,7 +140,8 @@ const SENSORS = {
     ],
   },
   sentinel1: {
-    label: 'Sentinel-1 radar (atravessa nuvem)', short: 'S1', group: 'secondary', res: 10,
+    label: 'Sentinel-1', short: 'S1', group: 'secondary', res: 10, since: 2014,
+    about: 'Radar europeu criado para enxergar a superfície com qualquer tempo, inclusive com nuvem e à noite.',
     stac: PC_STAC, collections: ['sentinel-1-rtc'],
     dtype: 'float32', nodata: -32768, refAsset: 'vv', maskAsset: 'vv', cloudFree: true,
     bands: [
@@ -150,7 +156,8 @@ const SENSORS = {
     composites: [{ label: 'Radar (VV, VH, VV)', b: ['vv', 'vh', 'vv'] }],
   },
   palsar: {
-    label: 'ALOS-2 PALSAR-2 radar (mosaico anual)', short: 'PALSAR', group: 'secondary', res: 25,
+    label: 'ALOS-2 PALSAR-2', short: 'PALSAR', group: 'secondary', res: 25, since: 2015,
+    about: 'Radar japonês de banda L, que penetra no dossel; criado para mapear florestas. Um mosaico por ano (até 2021).',
     stac: PC_STAC, collections: ['alos-palsar-mosaic'],
     dtype: 'uint16', nodata: 0, refAsset: 'HH', maskAsset: 'mask', cloudFree: true,
     mosaic: true, minWindowDays: 3650, // mosaicos anuais (2015 em diante); acha o ano mais próximo
@@ -167,7 +174,8 @@ const SENSORS = {
     composites: [{ label: 'Radar (HH, HV, HH)', b: ['hh', 'hv', 'hh'] }],
   },
   dem: {
-    label: 'Copernicus DEM (altitude, 30 m)', short: 'DEM', group: 'secondary', res: 30,
+    label: 'Copernicus DEM', short: 'DEM', group: 'secondary', res: 30, since: null,
+    about: 'Modelo de elevação global feito com a missão TanDEM-X. Dá a altitude do terreno, sem data.',
     stac: PC_STAC, collections: ['cop-dem-glo-30'],
     dtype: 'float32', nodata: -9999, refAsset: 'data', maskAsset: 'data',
     mosaic: true, static: true, cloudFree: true,
@@ -180,7 +188,8 @@ const SENSORS = {
     composites: [{ label: 'Altitude', b: ['elevation', 'elevation', 'elevation'] }],
   },
   modis: {
-    label: 'MODIS (250 m, composição de 8 dias)', short: 'MODIS', group: 'secondary', res: 250,
+    label: 'MODIS', short: 'MODIS', group: 'secondary', res: 250, since: 2000,
+    about: 'Sensor da NASA para monitoramento global diário; bom para tendências regionais. Composição de 8 dias.',
     stac: PC_STAC, collections: ['modis-09Q1-061'],
     dtype: 'int16', nodata: -28672, refAsset: 'sur_refl_b01', maskAsset: 'sur_refl_state_250m',
     mosaic: true, groupKey: it => it.properties.start_datetime.slice(0, 10) + '|' + it.properties.platform,
@@ -670,6 +679,11 @@ function buildGeoTIFF(img, meta) {
 }
 
 // ---------- realce para visualização ----------
+// Escala da prévia: ocupa toda a área disponível (largura e altura), ampliando sem limite
+// imagens de poucos pixels (MODIS) e reduzindo as grandes.
+function previewScale(W, H, maxW, maxH) {
+  return Math.min(maxW / W, maxH / H);
+}
 function percentiles(data, lo, hi, nodata = 0) {
   const step = Math.max(1, Math.floor(data.length / 200000)), s = [];
   for (let i = 0; i < data.length; i += step) { const v = data[i]; if (v !== nodata && !Number.isNaN(v)) s.push(v); }
@@ -688,7 +702,7 @@ function zipFile(name, buf) {
 
 globalThis.Core = {
   SENSORS, MODIS_SINU, readVectorFiles, zipFile, parseGeoJSON, stacSearch, searchRange, orderCandidates, checkCandidate, loadImage,
-  buildGeoTIFF, percentiles, addDays, isoDay, crsLabel, isGeographic,
+  buildGeoTIFF, percentiles, previewScale, addDays, isoDay, crsLabel, isGeographic,
   // expostos para os testes
   ensureProj, projectPolys, pointInRing, footprintContains, rasterize, signHref, assetOf, gridOf, epsgOf, itemDates,
 };

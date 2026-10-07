@@ -55,6 +55,18 @@ test('zipFile: .zip contém o .tif com o mesmo nome e conteúdo', async () => {
   assert.deepEqual(Buffer.from(files['area_S2_2025-07-23.tif']), Buffer.from(buf));
 });
 
+test('previewScale: imagem pequena (MODIS) é ampliada até ocupar a área; grande é reduzida', () => {
+  const maxW = 900, maxH = 600;
+  const fit = (W, H) => { const k = Core.previewScale(W, H, maxW, maxH); return [Math.round(W * k), Math.round(H * k)]; };
+  const [w1, h1] = fit(24, 17); // MODIS ~250 m
+  assert.ok(w1 === maxW || h1 === maxH, `24x17 => ${w1}x${h1} deve encostar na largura ou na altura`);
+  assert.ok(w1 <= maxW && h1 <= maxH);
+  const [w2, h2] = fit(4000, 3000);
+  assert.ok(w2 <= maxW && h2 <= maxH && (w2 === maxW || h2 === maxH));
+  const [w3, h3] = fit(20, 400); // faixa estreita e alta: limitada pela altura
+  assert.equal(h3, maxH);
+});
+
 test('percentiles: ignora zeros (sem dado) e evita intervalo vazio', () => {
   const d = Uint16Array.from({ length: 1000 }, (_, i) => (i % 10 === 0 ? 0 : i));
   const [lo, hi] = Core.percentiles(d, 0.02, 0.98);

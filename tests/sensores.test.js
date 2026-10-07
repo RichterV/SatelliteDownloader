@@ -15,6 +15,14 @@ for (const [key, s] of Object.entries(Core.SENSORS)) {
     assert.match(s.short, /^[A-Z0-9]+$/, 'short vai no nome do arquivo');
   });
 
+  test(`${key}: resolução, início dos dados e frase de finalidade para a escolha na interface`, () => {
+    assert.ok(Number.isFinite(s.res) && s.res > 0);
+    assert.ok(s.since === null || (Number.isInteger(s.since) && s.since >= 1972 && s.since <= new Date().getFullYear()), 'since');
+    assert.equal(typeof s.about, 'string');
+    assert.ok(s.about.length >= 30 && s.about.length <= 140, `about com ${s.about.length} caracteres (frase breve)`);
+    assert.ok(!/[<>]/.test(s.about + s.label), 'texto vai no HTML sem escape');
+  });
+
   test(`${key}: nodata cabe no tipo e é classificado como sem dado`, () => {
     const range = { uint16: [0, 65535], int16: [-32768, 32767], float32: [-3.4e38, 3.4e38] }[s.dtype];
     assert.ok(s.nodata >= range[0] && s.nodata <= range[1]);

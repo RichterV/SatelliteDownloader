@@ -39,7 +39,7 @@ body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; back
 @media (max-width: 860px) { .layout { grid-template-columns: 1fr; padding: 16px; } }
 
 /* ---------- formulário ---------- */
-.form { padding: 20px; display: flex; flex-direction: column; gap: 18px; position: sticky; top: 20px; }
+.form { padding: 20px; display: flex; flex-direction: column; gap: 18px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .label { font-size: .8rem; font-weight: 600; color: var(--muted); }
 input[type=number], input[type=date], select {
@@ -144,4 +144,17 @@ footer { padding: 16px; text-align: center; color: var(--muted); font-size: .8re
 footer a { color: var(--accent); text-decoration: none; }
 footer a:hover { text-decoration: underline; }
 input:disabled { opacity: .5; }
-#sensorOther { margin-top: 6px; }
+.sensor-info { font-size: .8rem; color: var(--muted); line-height: 1.45; }
+.sc-meta { display: inline-block; padding: 0 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+  font-size: .72rem; font-weight: 600; white-space: nowrap; }
+.sensor-list { display: flex; flex-direction: column; gap: 6px; }
+.sensor-card { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--field); cursor: pointer; transition: border-color .15s, background .15s; }
+.sensor-card:hover { border-color: var(--muted); }
+.sensor-card:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.sensor-card:has(input:checked) .sc-meta { background: var(--card); }
+.sensor-card input { position: absolute; opacity: 0; pointer-events: none; }
+.sensor-card:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sc-head b { font-size: .88rem; }
+.sc-about { font-size: .76rem; color: var(--muted); line-height: 1.4; }

@@ -5,22 +5,31 @@ const state = { geo: null, fileBase: 'talhoes', cands: [], idx: -1, img: null, r
 $('date').value = Core.isoDay(new Date());
 
 // ---------- satélite ----------
-// Sentinel-2 e Landsat 8/9 ficam no seletor; os secundários em "Outros"
+// Sentinel-2 e Landsat 8/9 ficam no seletor; os secundários em "Outros", como cartões com resolução e finalidade
+const sensorMeta = s => `${s.res} m` + (s.since ? ` · desde ${s.since}` : '');
 $('sensorOther').innerHTML = Object.entries(Core.SENSORS).filter(([, s]) => s.group === 'secondary')
-  .map(([k, s]) => `<option value="${k}">${s.label}</option>`).join('');
+  .map(([k, s], i) => `<label class="sensor-card"><input type="radio" name="sensorOther" value="${k}"${i ? '' : ' checked'}>` +
+    `<span class="sc-head"><b>${s.label}</b><span class="sc-meta">${sensorMeta(s)}</span></span><span class="sc-about">${s.about}</span></label>`).join('');
+document.querySelectorAll('input[name=sensor]').forEach(r => {
+  const s = Core.SENSORS[r.value];
+  if (s) r.parentElement.title = `${sensorMeta(s)}. ${s.about}`;
+});
 function currentSensor() {
   const v = document.querySelector('input[name=sensor]:checked').value;
-  return v === 'other' ? $('sensorOther').value : v;
+  return v === 'other' ? document.querySelector('input[name=sensorOther]:checked').value : v;
 }
 function onSensorChange() {
-  $('sensorOther').classList.toggle('hidden', document.querySelector('input[name=sensor]:checked').value !== 'other');
+  const other = document.querySelector('input[name=sensor]:checked').value === 'other';
+  $('sensorOther').classList.toggle('hidden', !other);
   const s = Core.SENSORS[currentSensor()];
+  $('sensorInfo').classList.toggle('hidden', other);
+  $('sensorInfo').innerHTML = `<span class="sc-meta">${sensorMeta(s)}</span> ${s.about}`;
   // produto sem data (DEM): data e janela não se aplicam
   for (const id of ['date', 'window']) $(id).disabled = !!s.static;
   $('tol').disabled = !!s.cloudFree;
 }
-document.querySelectorAll('input[name=sensor]').forEach(r => r.addEventListener('change', onSensorChange));
-$('sensorOther').addEventListener('change', onSensorChange);
+document.querySelectorAll('input[name=sensor], input[name=sensorOther]').forEach(r => r.addEventListener('change', onSensorChange));
+onSensorChange();
 
 // ---------- área ----------
 const DROP_HINT = $('fileInfo').textContent;
@@ -170,7 +179,7 @@ function draw() {
   octx.putImageData(id, 0, 0);
   // ajusta à largura disponível e a ~70% da altura da janela
   const maxW = $('viewWrap').clientWidth || 900, maxH = Math.max(320, window.innerHeight * 0.7);
-  const k = Math.min(8, maxW / img.W, maxH / img.H);
+  const k = Core.previewScale(img.W, img.H, maxW, maxH);
   const cv = $('view'); cv.width = Math.round(img.W * k); cv.height = Math.round(img.H * k);
   const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = k < 1;
   ctx.drawImage(off, 0, 0, cv.width, cv.height);
