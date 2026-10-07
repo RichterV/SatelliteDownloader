@@ -25,3 +25,7 @@ package-lock.json
 *.dbf
 *.prj
 *.cpg
+plantio_teste.json
+
+# Contexto local do Claude Code
+CLAUDE.md
