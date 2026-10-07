@@ -90,6 +90,12 @@
           <pattern id="sd-rows" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(-12)">
             <circle cx="1" cy="2" r="1.05" fill="rgba(20, 60, 35, .45)"/><circle cx="3" cy="2" r="1.05" fill="rgba(20, 60, 35, .45)"/>
           </pattern>
+          <!-- copas de eucalipto adulto, mudas espaçadas, tocos na colheita, mata nativa e canteiros do viveiro -->
+          <pattern id="sd-canopy" width="3.3" height="3.3" patternUnits="userSpaceOnUse" patternTransform="rotate(-8)"><circle cx="1.65" cy="1.65" r="1.45" fill="#3a9160" stroke="#1f5a37" stroke-width=".25"/><circle cx="1.25" cy="1.25" r=".45" fill="#6cc48c" opacity=".7"/></pattern>
+          <pattern id="sd-sprouts" width="4.2" height="4.2" patternUnits="userSpaceOnUse" patternTransform="rotate(-10)"><circle cx="2.1" cy="2.1" r=".75" fill="#3e9b63" stroke="#2a6d45" stroke-width=".2"/></pattern>
+          <pattern id="sd-stumps" width="3.3" height="3.3" patternUnits="userSpaceOnUse" patternTransform="rotate(-8)"><circle cx="1.65" cy="1.65" r=".45" fill="#8a6239"/></pattern>
+          <pattern id="sd-forest-tex" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="1.4" cy="1.5" r="1.6" fill="#3f8a57" stroke="#24553a" stroke-width=".25"/><circle cx="3.9" cy="3.8" r="1.4" fill="#357a4b" stroke="#24553a" stroke-width=".25"/><circle cx="4.2" cy="1.1" r=".9" fill="#4b9a64"/></pattern>
+          <pattern id="sd-beds" width="3.4" height="3.6" patternUnits="userSpaceOnUse"><rect x=".2" y=".2" width="3" height="3.2" rx=".4" fill="#cfe9b8"/></pattern>
           <clipPath id="sd-screen-clip"><rect x="224" y="126" width="122" height="76" rx="4"/></clipPath>
           <clipPath id="sd-globe-clip"><circle cx="200" cy="130" r="128"/></clipPath>
         </defs>
@@ -216,30 +222,49 @@
           <!-- mapa na tela -->
           <g class="sd-map" clip-path="url(#sd-screen-clip)">
             <rect class="sd-land" x="224" y="126" width="122" height="76"/>
-            <path class="sd-contour" d="M224 140c20-6 34 4 52-2s30-10 42-4 20 2 28 0M224 150c18-4 30 6 48 0s34-12 46-6 18 4 28 2"/>
-            <!-- talhões de eucalipto (idades diferentes) -->
+            <path class="sd-contour" d="M224 136c16-5 30 3 46-2s28-8 40-3 22 2 36-1M224 145c18-4 30 6 48 0s34-12 46-6 18 4 28 2M224 156c14-2 26 4 40 1M224 186c12-3 22 2 34-1M262 201c14-4 30 1 44-2"/>
+            <!-- aceiros (estradas internas entre talhões) -->
+            <path class="sd-aceiro" d="M263.5 128v26M290.5 128v25M262.5 172v28M231 156.5h86M233 174h56"/>
+            <!-- talhões: adulto (copas), médio (linhas), em colheita, jovem (mudas espaçadas), viveiro -->
             <g class="sd-plots">
-              <g class="sd-stand" style="transform-origin:247px 141px"><path class="sd-st1" d="M233 131l27-2 3 23-28 2z"/><path class="sd-rows" d="M233 131l27-2 3 23-28 2z"/></g>
-              <g class="sd-stand" style="transform-origin:277px 140px;animation-delay:.12s"><path class="sd-st2" d="M264 129l25 1-1 22-23 1z"/><path class="sd-rows" d="M264 129l25 1-1 22-23 1z"/></g>
-              <g class="sd-stand" style="transform-origin:304px 143px;animation-delay:.24s"><path class="sd-st3" d="M292 131l24 3-2 19-23-2z"/><path class="sd-rows" d="M292 131l24 3-2 19-23-2z"/></g>
-              <g class="sd-stand" style="transform-origin:248px 186px;animation-delay:.36s"><path class="sd-st2" d="M236 176l25 1-1 19-26-1z"/><path class="sd-rows" d="M236 176l25 1-1 19-26-1z"/></g>
-              <g class="sd-stand" style="transform-origin:276px 187px;animation-delay:.48s"><path class="sd-st3" d="M265 177l23 2-2 17-22-2z"/><path class="sd-rows" d="M265 177l23 2-2 17-22-2z"/></g>
+              <g class="sd-stand" style="transform-origin:247px 141px"><path class="sd-mature" d="M232 131Q246 128 260 129.5L262 152Q248 155 233.5 154Z"/></g>
+              <g class="sd-stand" style="transform-origin:277px 140px;animation-delay:.12s"><path class="sd-st2" d="M265 129.5Q277 128.5 289 130L288 151.5Q276 153 266 152.5Z"/><path class="sd-rows" d="M265 129.5Q277 128.5 289 130L288 151.5Q276 153 266 152.5Z"/></g>
+              <g class="sd-stand" style="transform-origin:304px 142px;animation-delay:.24s"><path class="sd-mature" d="M292 131Q304 131 316 134L314.5 152.5Q302 152 291.5 151Z"/><path class="sd-harvested" d="M292 131Q298 131 303.6 131.4L302.8 151.9Q297 151.5 291.5 151Z"/></g>
+              <g class="sd-stand" style="transform-origin:248px 186px;animation-delay:.36s"><path class="sd-young" d="M236 176Q248 175.5 261 177L260 195.5Q247 196.5 235 195Z"/><path class="sd-sprouts" d="M236 176Q248 175.5 261 177L260 195.5Q247 196.5 235 195Z"/></g>
+              <g class="sd-stand" style="transform-origin:276px 187px;animation-delay:.48s"><path class="sd-nursery" d="M265 177Q276 177.5 288 179L286.5 195.5Q275 195 264 194Z"/><circle class="sd-seedling" cx="268" cy="181.2" r=".95" style="transform-origin:268px 181.2px;animation-delay:0s"/><circle class="sd-seedling" cx="271.4" cy="181.2" r=".95" style="transform-origin:271.4px 181.2px;animation-delay:0.11s"/><circle class="sd-seedling" cx="274.8" cy="181.2" r=".95" style="transform-origin:274.8px 181.2px;animation-delay:0.22s"/><circle class="sd-seedling" cx="278.2" cy="181.2" r=".95" style="transform-origin:278.2px 181.2px;animation-delay:0.33s"/><circle class="sd-seedling" cx="281.6" cy="181.2" r=".95" style="transform-origin:281.6px 181.2px;animation-delay:0.44s"/><circle class="sd-seedling" cx="285" cy="181.2" r=".95" style="transform-origin:285px 181.2px;animation-delay:0.55s"/><circle class="sd-seedling" cx="268" cy="184.8" r=".95" style="transform-origin:268px 184.8px;animation-delay:0.11s"/><circle class="sd-seedling" cx="271.4" cy="184.8" r=".95" style="transform-origin:271.4px 184.8px;animation-delay:0.22s"/><circle class="sd-seedling" cx="274.8" cy="184.8" r=".95" style="transform-origin:274.8px 184.8px;animation-delay:0.33s"/><circle class="sd-seedling" cx="278.2" cy="184.8" r=".95" style="transform-origin:278.2px 184.8px;animation-delay:0.44s"/><circle class="sd-seedling" cx="281.6" cy="184.8" r=".95" style="transform-origin:281.6px 184.8px;animation-delay:0.55s"/><circle class="sd-seedling" cx="285" cy="184.8" r=".95" style="transform-origin:285px 184.8px;animation-delay:0.66s"/><circle class="sd-seedling" cx="268" cy="188.4" r=".95" style="transform-origin:268px 188.4px;animation-delay:0.22s"/><circle class="sd-seedling" cx="271.4" cy="188.4" r=".95" style="transform-origin:271.4px 188.4px;animation-delay:0.33s"/><circle class="sd-seedling" cx="274.8" cy="188.4" r=".95" style="transform-origin:274.8px 188.4px;animation-delay:0.44s"/><circle class="sd-seedling" cx="278.2" cy="188.4" r=".95" style="transform-origin:278.2px 188.4px;animation-delay:0.55s"/><circle class="sd-seedling" cx="281.6" cy="188.4" r=".95" style="transform-origin:281.6px 188.4px;animation-delay:0.66s"/><circle class="sd-seedling" cx="285" cy="188.4" r=".95" style="transform-origin:285px 188.4px;animation-delay:0.77s"/><circle class="sd-seedling" cx="268" cy="192" r=".95" style="transform-origin:268px 192px;animation-delay:0.33s"/><circle class="sd-seedling" cx="271.4" cy="192" r=".95" style="transform-origin:271.4px 192px;animation-delay:0.44s"/><circle class="sd-seedling" cx="274.8" cy="192" r=".95" style="transform-origin:274.8px 192px;animation-delay:0.55s"/><circle class="sd-seedling" cx="278.2" cy="192" r=".95" style="transform-origin:278.2px 192px;animation-delay:0.66s"/><circle class="sd-seedling" cx="281.6" cy="192" r=".95" style="transform-origin:281.6px 192px;animation-delay:0.77s"/><circle class="sd-seedling" cx="285" cy="192" r=".95" style="transform-origin:285px 192px;animation-delay:0.88s"/></g>
             </g>
-            <!-- estrada de terra -->
-            <path class="sd-road" d="M224 167c18 2 34-6 52-4s30 8 44 4 18-10 26-12"/>
-            <path class="sd-road-mid" d="M224 167c18 2 34-6 52-4s30 8 44 4 18-10 26-12"/>
-            <!-- rio desaguando no lago -->
+            <!-- mata nativa: APP ao longo do rio e reserva legal junto ao lago -->
+            <g class="sd-pop" style="transform-origin:331px 150px;animation-delay:.1s"><path class="sd-native" d="M325 126Q327 135 325 143Q322 152 323 160Q323 170 322 177L339 177Q337 168 336 160Q337 150 339.5 143Q341.5 134 342.5 126Z"/><circle class="sd-sway" cx="324.5" cy="131" r="2.6" style="animation-delay:0s"/><circle class="sd-sway" cx="339.5" cy="139" r="2.4" style="animation-delay:0.5s"/><circle class="sd-sway" cx="322" cy="149" r="2.5" style="animation-delay:0.9s"/><circle class="sd-sway" cx="338" cy="154" r="2.3" style="animation-delay:0.3s"/><circle class="sd-sway" cx="323.5" cy="173" r="2.4" style="animation-delay:0.7s"/></g>
+            <g class="sd-pop" style="transform-origin:302px 190px;animation-delay:.2s"><path class="sd-native" d="M293 183Q300 180 309 182Q314 188 311 197Q302 200 294 197Q290 190 293 183Z"/></g>
             <ellipse class="sd-lake sd-pop" style="transform-origin:330px 186px;animation-delay:.2s" cx="330" cy="186" rx="14" ry="9"/>
             <path class="sd-river-bank" d="M334 126c-3 6 1 11-2 17s-5 10-3 16 2 9 1 18"/>
             <path class="sd-river" d="M334 126c-3 6 1 11-2 17s-5 10-3 16 2 9 1 18"/>
+            <!-- estrada de terra -->
+            <path class="sd-road" d="M224 167c18 2 34-6 52-4s30 8 44 4 18-10 26-12"/>
+            <path class="sd-road-mid" d="M224 167c18 2 34-6 52-4s30 8 44 4 18-10 26-12"/>
             <g class="sd-bridge" transform="translate(330.16 163.07) rotate(-26.61)"><rect x="-5.33" y="-2.2" width="10.65" height="4.4" rx=".8"/><path d="M-5.33 -2.2h10.65M-5.33 2.2h10.65"/></g>
-            <!-- mata nativa ao longo do rio -->
-            <g class="sd-pop" style="transform-origin:300px 188px"><circle class="sd-forest" cx="296" cy="190" r="4.5"/><circle class="sd-forest2" cx="303" cy="185" r="4"/><circle class="sd-forest" cx="309" cy="196" r="4"/></g>
-            <g class="sd-pop" style="transform-origin:322px 142px;animation-delay:.15s"><circle class="sd-forest" cx="321" cy="138" r="4.2"/><circle class="sd-forest2" cx="325" cy="145" r="3.4"/><circle class="sd-forest" cx="318.5" cy="146" r="3.2"/></g>
-            <!-- sede da fazenda -->
+            <!-- sede, pátio de toras e torre de observação de incêndio -->
             <g class="sd-pop" style="transform-origin:316px 172px;animation-delay:.3s"><rect class="sd-house" x="312" y="169" width="8" height="6"/><path class="sd-roof" d="M310.5 169.5l5.5-5 5.5 5z"/></g>
+            <g class="sd-pop" style="transform-origin:306px 171px;animation-delay:.35s"><g class="sd-logs"><rect x="303" y="169.6" width="6.4" height="1" rx=".5"/><rect x="303" y="170.7" width="6.4" height="1" rx=".5"/><rect x="303.6" y="171.8" width="5.2" height="1" rx=".5"/></g></g>
+            <g class="sd-pop" style="transform-origin:297px 148px;animation-delay:.4s"><g class="sd-logs"><rect x="293.6" y="146.6" width="5.4" height=".9" rx=".45"/><rect x="293.6" y="147.6" width="5.4" height=".9" rx=".45"/><rect x="294.1" y="148.6" width="4.4" height=".9" rx=".45"/></g></g>
+            <g class="sd-pop sd-tower" style="transform-origin:229px 186px;animation-delay:.3s"><path class="sd-tower-legs" d="M226.6 186.5L228.4 173.4M231.4 186.5L229.6 173.4M227.1 183.4h3.8M227.6 179.6h2.8M228 176.4h2"/><rect class="sd-tower-cab" x="226.9" y="170.6" width="4.2" height="3" rx=".4"/><path class="sd-tower-roof" d="M226.2 170.8l2.8-2 2.8 2z"/><circle class="sd-tower-light" cx="229" cy="167.9" r=".75"/></g>
+            <!-- sensores Treevia nas árvores do talhão adulto -->
+            <g class="sd-sensor"><circle class="sd-ping" cx="240" cy="137" r="1" style="transform-origin:240px 137px;animation-delay:0s"/><rect x="238.85" y="135.85" width="2.3" height="2.3" rx=".45"/><circle class="sd-sensor-led" cx="240" cy="137" r=".55"/></g><g class="sd-sensor"><circle class="sd-ping" cx="254" cy="141" r="1" style="transform-origin:254px 141px;animation-delay:0.6s"/><rect x="252.85" y="139.85" width="2.3" height="2.3" rx=".45"/><circle class="sd-sensor-led" cx="254" cy="141" r=".55"/></g><g class="sd-sensor"><circle class="sd-ping" cx="246" cy="149" r="1" style="transform-origin:246px 149px;animation-delay:1.2s"/><rect x="244.85" y="147.85" width="2.3" height="2.3" rx=".45"/><circle class="sd-sensor-led" cx="246" cy="149" r=".55"/></g>
+            <!-- harvester trabalhando na borda da colheita -->
+            <g transform="translate(303.6 136) scale(1.45)"><g class="sd-harvester">
+              <rect class="sd-track" x="-2.4" y="-1.75" width="4.8" height=".6" rx=".25"/><rect class="sd-track" x="-2.4" y="1.15" width="4.8" height=".6" rx=".25"/>
+              <rect class="sd-harv-body" x="-2" y="-1.3" width="4" height="2.6" rx=".5"/><rect class="sd-harv-glass" x=".5" y="-.95" width="1.25" height="1.9" rx=".3"/>
+              <g class="sd-boom"><path d="M-.6 0L-4 -1.4"/><rect class="sd-harv-body" x="-5.1" y="-2.2" width="1.6" height="1.5" rx=".3"/></g>
+            </g></g>
+            <!-- caminhão de toras na estrada -->
+            <g class="sd-truck"><rect class="sd-shadow" x="-4.5" y="-.8" width="9.6" height="2.8" rx=".5"/><rect class="sd-truck-bed" x="-5" y="-1.4" width="7" height="2.8" rx=".4"/><rect class="sd-log" x="-4.8" y="-1.25" width="6.6" height=".78" rx=".39"/><rect class="sd-log" x="-4.8" y="-.39" width="6.6" height=".78" rx=".39"/><rect class="sd-log" x="-4.8" y=".47" width="6.6" height=".78" rx=".39"/><rect class="sd-truck-cab" x="2.3" y="-1.35" width="2.7" height="2.7" rx=".5"/><rect class="sd-truck-glass" x="4.1" y="-1.05" width=".55" height="2.1" rx=".2"/></g>
+            <!-- drone fazendo inventário (com sombra no chão) -->
+            <g class="sd-drone"><g transform="scale(1.5)"><ellipse class="sd-shadow" cx="3" cy="3.4" rx="2.6" ry="1.8"/><path class="sd-drone-arm" d="M-2-2L2 2M-2 2L2-2"/><circle class="sd-rotor" cx="-2" cy="-2" r="1.05"/><circle class="sd-rotor" cx="2" cy="-2" r="1.05"/><circle class="sd-rotor" cx="-2" cy="2" r="1.05"/><circle class="sd-rotor" cx="2" cy="2" r="1.05"/><rect class="sd-drone-body" x="-.85" y="-.85" width="1.7" height="1.7" rx=".4"/><circle class="sd-drone-led" cx="0" cy="0" r=".35"/></g></g>
+            <!-- pássaros e sombra de nuvem -->
+            <g class="sd-birds"><g transform="scale(1.7)"><path class="sd-wing" d="M-1.8 0q.9-1.2 1.8 0q.9-1.2 1.8 0"/><path class="sd-wing" style="animation-delay:.15s" d="M2.4 2.2q.8-1 1.6 0q.8-1 1.6 0"/><path class="sd-wing" style="animation-delay:.3s" d="M-4.6 2.6q.8-1 1.6 0q.8-1 1.6 0"/></g></g>
+            <ellipse class="sd-cloudsh" cx="0" cy="0" rx="16" ry="6.5"/>
             <!-- rosa dos ventos e escala -->
-            <g class="sd-compass"><circle cx="229" cy="195" r="3.6"/><path d="M229 191.6l1.6 3.4h-3.2z"/><text x="229" y="189.6" class="sd-n">N</text></g>
+            <g class="sd-compass"><circle cx="341" cy="134.6" r="3"/><path d="M341 131.8l1.4 2.9h-2.8z"/><text x="341" y="130.2" class="sd-n">N</text></g>
             <g class="sd-scalebar"><rect x="264" y="198" width="8" height="1.6"/><rect class="sd-sb2" x="272" y="198" width="8" height="1.6"/><text x="282" y="199.8">1 km</text></g>
             <!-- pin no talhão -->
             <g class="sd-pin"><path d="M276 147c-4-5-7-7.5-7-10.5a7 7 0 0 1 14 0c0 3-3 5.5-7 10.5z"/><circle cx="276" cy="136.5" r="2.4"/></g>

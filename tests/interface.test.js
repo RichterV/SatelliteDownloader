@@ -202,3 +202,22 @@ test('tela vazia: logo da Treevia só na tela verde-escura (ao receber o pacote 
   const pinRest = +css.match(/@keyframes sd-pin \{[\s\S]*?\n {2}([\d.]+)%, 92\.31%, 100%/)[1];
   assert.ok(pinRest < 73.85, `pin assenta (${pinRest}%) antes de o mapa sumir`);
 });
+
+test('tela vazia: mapa florestal com texturas por idade e elementos animados do setor', () => {
+  const svg = html.match(/<svg class="sd-anim"[\s\S]*?<\/svg>/)[0];
+  const map = svg.match(/<g class="sd-map"[\s\S]*?<rect class="sd-scan"/)[0];
+  for (const cls of ['sd-mature', 'sd-young', 'sd-sprouts', 'sd-harvested', 'sd-nursery', 'sd-native', 'sd-aceiro'])
+    assert.ok(map.includes(`class="${cls}"`), `textura/área ${cls}`);
+  for (const id of ['sd-canopy', 'sd-sprouts', 'sd-forest-tex', 'sd-beds']) assert.match(svg, new RegExp(`<pattern id="${id}"`), id);
+  // elementos animados ligados ao setor florestal
+  const anim = { 'sd-truck': 'sd-truck', 'sd-harvester': 'sd-harvest', 'sd-drone': 'sd-drone', 'sd-ping': 'sd-ping',
+    'sd-seedling': 'sd-grow', 'sd-sway': 'sd-sway', 'sd-birds': 'sd-birds', 'sd-tower-light': 'sd-blink' };
+  for (const [cls, k] of Object.entries(anim)) {
+    assert.ok(map.includes(`class="${cls}`) || map.includes(`sd-pop ${cls}`), `elemento ${cls}`);
+    assert.match(css, new RegExp(`\\.${cls} \\{[^}]*animation: ${k} [^;]*infinite`), `${cls} animado em loop`);
+  }
+  assert.ok((map.match(/class="sd-sensor"/g) || []).length >= 3, 'sensores Treevia nas árvores');
+  // caminhão: ângulo contínuo (sem dar meia-volta entre quadros)
+  const ang = [...css.match(/@keyframes sd-truck \{([\s\S]*?)\n\}/)[1].matchAll(/rotate\((-?[\d.]+)deg\)/g)].map(m => +m[1]);
+  for (let i = 1; i < ang.length; i++) assert.ok(Math.abs(ang[i] - ang[i - 1]) < 45, `caminhão gira ${ang[i - 1]} -> ${ang[i]}`);
+});
