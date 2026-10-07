@@ -26,25 +26,20 @@ test('canvasToPixel: posição no canvas ampliado vira linha/coluna da imagem', 
   assert.deepEqual(Core.canvasToPixel(1.2, 0.6, 0.5, 0.5, W, H), { c: 2, r: 1 });
 });
 
-test('pixelValues: valor armazenado e convertido de cada banda, na ordem do arquivo', () => {
+test('pixelValues: valor bruto de cada banda, na ordem do arquivo, sem conversão', () => {
   const v = Core.pixelValues(img, 2, 1); // índice 1*4+2 = 6
   assert.deepEqual(v.map(b => b.name), ['red', 'thermal', 'vv']);
-  assert.equal(v[0].raw, 1006);
-  assert.ok(Math.abs(v[0].value - (1006 * 0.0001 - 0.1)) < 1e-12, 'reflectância');
-  assert.ok(Math.abs(v[1].value - (44000 * 0.00341802 + 149)) < 1e-9, 'temperatura');
-  assert.equal(v[1].unit, 'K');
-  assert.equal(v[2].raw, 0.25);
-  assert.equal(v[2].value, null, 'sem escala/offset não repete o valor');
+  assert.deepEqual(v.map(b => b.raw), [1006, 44000, 0.25], 'valores como estão no .tif, sem escala/offset');
   assert.ok(v.every(b => !b.nodata));
+  assert.ok(v.every(b => !('value' in b)));
 });
 
-test('pixelValues: pixel sem dado (nodata ou NaN) não é convertido', () => {
+test('pixelValues: pixel sem dado (nodata ou NaN) é sinalizado', () => {
   const m = { ...img, bands: img.bands.map(b => ({ ...b, data: b.data.slice() })) };
   m.bands[0].data[0] = 0;
   m.bands[2].data[0] = NaN;
   const v = Core.pixelValues(m, 0, 0);
   assert.equal(v[0].nodata, true);
-  assert.equal(v[0].value, null);
   assert.equal(v[2].nodata, true);
   assert.equal(v[1].nodata, false);
 });
@@ -65,4 +60,5 @@ test('interface: balão do pixel existe dentro da prévia e o clique está ligad
   assert.match(app, /\$\('view'\)\.addEventListener\('click'/);
   assert.match(app, /strokeStyle = '#ff2d2d'/, 'borda vermelha na seleção');
   assert.match(app, /e\.key === 'Escape'/, 'Esc fecha o balão');
+  assert.doesNotMatch(app, /Convertido/, 'balão mostra só valores brutos');
 });

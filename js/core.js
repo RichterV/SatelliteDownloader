@@ -700,14 +700,12 @@ function canvasToPixel(x, y, sx, sy, W, H) {
   const c = Math.floor(x / sx), r = Math.floor(y / sy);
   return c >= 0 && c < W && r >= 0 && r < H ? { c, r } : null;
 }
-// Valor de cada banda no pixel: armazenado (raw) e convertido (raw * escala + offset), ou nodata
+// Valor bruto (como está no .tif) de cada banda no pixel, indicando sem dado
 function pixelValues(img, c, r) {
   const i = r * img.W + c;
   return img.bands.map(b => {
     const raw = b.data[i];
-    const nodata = raw === img.nodata || Number.isNaN(raw);
-    const converted = !nodata && (b.scale !== 1 || b.offset !== 0);
-    return { name: b.name, code: b.code, unit: b.unit || '', raw, nodata, value: converted ? raw * b.scale + b.offset : null };
+    return { name: b.name, code: b.code, raw, nodata: raw === img.nodata || Number.isNaN(raw) };
   });
 }
 // Centro do pixel em lon/lat (WGS84)

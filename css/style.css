@@ -178,6 +178,6 @@ input:disabled { opacity: .5; }
 .pixel-pop table { width: 100%; font-size: .78rem; }
 .pixel-pop th, .pixel-pop td { padding: 3px 6px; border-bottom: 1px solid rgba(255, 255, 255, .08); white-space: nowrap; background: none; color: inherit; }
 .pixel-pop th { position: static; color: rgba(255, 255, 255, .6); font-size: .7rem; }
-.pixel-pop td:nth-child(n+2) { text-align: right; font-variant-numeric: tabular-nums; }
+.pixel-pop th:nth-child(2), .pixel-pop td:nth-child(2) { text-align: center; font-variant-numeric: tabular-nums; }
 .pixel-pop tbody tr:last-child td { border-bottom: 0; }
 .pp-nd { color: #ff8a80; }

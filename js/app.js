@@ -227,14 +227,13 @@ function showPixel(c, r) {
   const img = state.img;
   state.sel = { c, r };
   const [lon, lat] = Core.pixelLonLat(img, c, r);
+  // valores brutos, como estão no .tif
   const rows = Core.pixelValues(img, c, r).map(v =>
-    `<tr><td>${v.name}</td><td>${v.nodata ? '<span class="pp-nd">sem dado</span>' : fmtNum(v.raw)}</td>` +
-    `<td>${v.value === null ? '' : fmtNum(v.value) + (v.unit && v.unit.length <= 3 ? ' ' + v.unit : '')}</td></tr>`).join('');
-  const conv = img.bands.some(b => b.scale !== 1 || b.offset !== 0);
+    `<tr><td>${v.name}</td><td>${v.nodata ? '<span class="pp-nd">sem dado</span>' : fmtNum(v.raw)}</td></tr>`).join('');
   $('pixelPop').innerHTML =
     `<div class="pp-head"><span>Linha ${r}, coluna ${c}<small>${lat.toFixed(6)}, ${lon.toFixed(6)}</small></span>` +
     `<button class="pp-close" aria-label="Fechar">×</button></div>` +
-    `<table><thead><tr><th>Banda</th><th>Valor</th><th>${conv ? 'Convertido' : ''}</th></tr></thead><tbody>${rows}</tbody></table>`;
+    `<table><thead><tr><th>Banda</th><th>Valor</th></tr></thead><tbody>${rows}</tbody></table>`;
   $('pixelPop').classList.remove('hidden');
   draw();
 }
