@@ -107,7 +107,7 @@ test('tela vazia: animação em loop (só CSS) que some quando a imagem aparece'
   const z = +css.match(/@keyframes sd-zoom \{[\s\S]*?translate\([^)]*\) scale\(([\d.]+)\)/)[1];
   assert.ok(140 * z <= 400 && 100 * z <= 260, `monitor cabe no zoom (scale ${z})`);
   assert.match(empty[1], /<image class="sd-logo" href="logo\.png"/, 'logo da Treevia no computador');
-  assert.match(css, /--sd-t: 13s/, 'loop de 13 s (2 s de entrada orbitando + 10 s da história + 1 s de saída)');
+  assert.match(css, /--sd-t: 16\.18s/, 'loop de 16,18 s (2 s de entrada orbitando + ~8,2 s da história com queda e zooms rápidos + 2 s de entrega + 1 s de saída + 3 s de destaque da lupa para ler)');
   for (const k of ['sd-drop', 'sd-zoom', 'sd-calc-show', 'sd-up']) {
     assert.match(css, new RegExp(`@keyframes ${k} \\{`), k);
     assert.match(css, new RegExp(`animation: ${k} var\\(--sd-t\\)[^;]*infinite`), `${k} em loop`);
@@ -227,7 +227,9 @@ test('tela vazia: logo da Treevia só na tela verde-escura (ao receber o pacote 
   }
   assert.ok(seen > 100, 'logo aparece nas duas telas verdes');
   // aparece ao receber o pacote (antes dos cálculos) e na volta (depois deles)
-  assert.ok(at(logo, 43) > 0.9 && at(logo, 85) > 0.9, 'logo nas duas telas verdes');
+  let windows = 0, prev = false;
+  for (let t = 0; t <= 100; t += 0.1) { const v = at(logo, t) > 0.9; if (v && !prev) windows++; prev = v; }
+  assert.equal(windows, 2, 'logo nas duas telas verdes (duas janelas separadas)');
 });
 
 test('tela vazia: satélite com câmera, feixe de captura, identidade Treevia e olho expressivo', () => {
@@ -262,7 +264,7 @@ test('tela vazia: zoom leve (cálculos só com o zoom completo) e feixe sobre a 
   const zOut = +zoom.match(/\n {2}[\d.]+%, ([\d.]+)% \{ transform: translate/)[1];
   const showKf = css.match(/@keyframes sd-calc-show \{([^\n]*)\}/)[1];
   const visibleFrom = +showKf.match(/([\d.]+)% \{ visibility: visible; \}/)[1];
-  const hiddenFrom = +showKf.match(/([\d.]+)%, 92\.31%, 100% \{ opacity: 0; visibility: hidden; \}/)[1];
+  const hiddenFrom = +showKf.match(/([\d.]+)%(?:, [\d.]+%)*, 100% \{ opacity: 0; visibility: hidden; \}/)[1];
   assert.ok(visibleFrom >= zIn && hiddenFrom <= zOut, `cálculos visíveis só entre o fim do zoom (${zIn}%) e o início da saída (${zOut}%)`);
   assert.match(css, /@keyframes sd-ui \{[^\n]*visibility: hidden/, 'tela da plataforma oculta quando transparente');
   // satélite sem o logo (só a faixa verde)
@@ -319,7 +321,7 @@ test('tela vazia: só a cena de cálculos no zoom (o mapa florestal foi removido
 });
 
 test('tela vazia: tudo da cena de cálculos termina de entrar antes de a tela começar a sumir', () => {
-  const T = 13, fade = +css.match(/@keyframes sd-calc-show \{[^\n]*?52\.3%, ([\d.]+)% \{ opacity: 1/)[1];
+  const T = +css.match(/--sd-t: ([\d.]+)s/)[1], fade = +css.match(/@keyframes sd-calc-show \{[^\n]*?[\d.]+%, ([\d.]+)% \{ opacity: 1/)[1];
   const calc = calcMarkup();
   const kfOf = { 'sd-calc-pop': 'sd-calc-pop', 'sd-calc-dot': 'sd-calc-dot', 'sd-calc-odo': 'sd-calc-odo', 'sd-calc-line sd-calc-diag': 'sd-calc-draw',
     'sd-calc-line sd-calc-trend': 'sd-calc-trend', 'sd-calc-band': 'sd-calc-fade', 'sd-calc-cover': 'sd-calc-type' };
@@ -372,3 +374,210 @@ test('tela vazia: pontos dos gráficos dentro das áreas de plotagem e linhas cr
     assert.deepEqual([+m[1], +m[2]], [+m[3], +m[4]], 'origem da escala no primeiro ponto da linha');
 });
 
+
+// ======================= tela vazia: entrega na fazenda do cliente =======================
+// quadros de uma keyframe: [[porcentagem, corpo]], ordenados
+const frames = name => {
+  const h = '@keyframes ' + name + ' {';
+  let i = css.indexOf(h) + h.length, d = 1, j = i;
+  assert.ok(i >= h.length, `keyframe ${name}`);
+  while (d) { if (css[j] === '{') d++; else if (css[j] === '}') d--; j++; }
+  return [...css.slice(i, j - 1).matchAll(/([\d.%,\s]+)\{([^}]*)\}/g)]
+    .flatMap(m => m[1].split(',').map(t => parseFloat(t)).filter(t => !isNaN(t)).map(t => [t, m[2].trim()]))
+    .sort((a, b) => a[0] - b[0]);
+};
+const T15 = () => +css.match(/--sd-t: ([\d.]+)s/)[1];
+// entrega: 2 s com o satélite parado; o fim do brilho de recepção (sd-glow) marca o início e o fim da pausa
+const PAUSE = (() => { const g = css.match(/@keyframes sd-glow \{[^\n]*?([\d.]+)%, ([\d.]+)%, 100% \{/); return [+g[1], +g[2]]; })();
+
+test('tela vazia: ciclo ganhou 2 s de pausa para a entrega; satélite e cena parados nesse intervalo', () => {
+  assert.equal(T15(), 16.18);
+  assert.ok(Math.abs((PAUSE[1] - PAUSE[0]) / 100 * T15() - 2) < 0.01, 'pausa de 2 s');
+  for (const k of ['sd-orbit-front', 'sd-glow', 'sd-zoom', 'sd-drop', 'sd-up', 'sd-calc-show']) {
+    const f = frames(k), a = f.find(([p]) => p === PAUSE[0]), b = f.find(([p]) => p === PAUSE[1]);
+    assert.ok(a && b && a[1] === b[1], `${k}: mesmo estado em ${PAUSE[0]}% e ${PAUSE[1]}%`);
+    assert.ok(!f.some(([p]) => p > PAUSE[0] && p < PAUSE[1]), `${k}: nada se move durante a entrega`);
+  }
+});
+
+test('tela vazia: queda do pacote e zooms rápidos', () => {
+  const T = T15(), sec = p => p / 100 * T;
+  // zoom de entrada e de saída: do monitor normal ao enquadrado em ~0,55 s
+  const z = frames('sd-zoom').map(([p, b]) => [sec(p), /scale/.test(b)]);
+  const zIn = z.find(([, s]) => s)[0] - z.filter(([t, s]) => !s && t < z.find(([, s2]) => s2)[0]).at(-1)[0];
+  const lastZoomed = z.filter(([, s]) => s).at(-1)[0], zOut = z.find(([t, s]) => !s && t > lastZoomed)[0] - lastZoomed;
+  assert.ok(zIn < 0.7 && zOut < 0.7, `zoom de entrada ${zIn.toFixed(2)} s e de saída ${zOut.toFixed(2)} s`);
+  // pacote: do primeiro quadro visível até bater na tela (flash)
+  const drop = frames('sd-drop').filter(([, b]) => /opacity: 1/.test(b)).map(([p]) => sec(p));
+  const hit = sec(+css.match(/@keyframes sd-flash \{[^}]*\}\s*([\d.]+)%/)[1]);
+  assert.ok(hit - drop[0] < 1.6, `pacote cai em ${(hit - drop[0]).toFixed(2)} s`);
+});
+
+// ---------- final: lupa sobre o talhão ("Dados que geram resultado") ----------
+const farmMarkup = () => svgAnim().match(/<g class="sd-farm">[\s\S]*?\n {10}<\/g>/)[0];
+const lens = () => { const m = farmMarkup().match(/<circle class="sd-lens-frame" cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/); return { cx: +m[1], cy: +m[2], r: +m[3] }; };
+
+test('tela vazia: final com lupa sobre o talhão (árvores, sensores, cores de produtividade, IMA e "Dados que geram resultado")', () => {
+  const svg = svgAnim(), farm = farmMarkup();
+  assert.match(farm, /<clipPath id="sd-lens-clip"><circle class="sd-lens-r"/, 'lente recorta o talhão');
+  for (const cls of ['sd-lens-cone', 'sd-farm-pin', 'sd-farm-ring', 'sd-lens-sky', 'sd-lens-ground', 'sd-lens-scan', 'sd-lens-frame', 'sd-lens-kpi', 'sd-lens-tag'])
+    assert.ok(farm.includes(`class="${cls}"`), cls);
+  const trees = [...farm.matchAll(/<g class="sd-lens-tree"[^>]*>([\s\S]*?)<\/g><\/g>/g)].map(m => m[1]);
+  assert.ok(trees.length >= 6, `árvores (${trees.length})`);
+  // cada árvore ganha uma cor de produtividade; as três classes aparecem
+  const prods = trees.map(t => (t.match(/sd-prod-(high|mid|low)/) || [])[1]);
+  assert.ok(prods.every(Boolean), 'toda árvore com cor de produtividade');
+  assert.deepEqual([...new Set(prods)].sort(), ['high', 'low', 'mid']);
+  // sensores Treevia presos nos troncos (dentro do grupo da árvore: crescem junto)
+  assert.equal((farm.match(/class="sd-lens-sensor"/g) || []).length, 2);
+  assert.match(farm, /<g class="sd-lens-tree"[^>]*>(?:(?!<g class="sd-lens-tree")[\s\S])*?class="sd-lens-sensor"/, 'sensor dentro de uma árvore');
+  assert.match(farm, /<text[^>]*>IMA 38,4 m³\/ha\/ano <tspan>▲<\/tspan><\/text>/);
+  assert.match(farm, /<text[^>]*>Dados que geram resultado<\/text>/, 'lema da Treevia');
+  assert.doesNotMatch(svg, /sd-farmer|sd-badge|sd-wave/, 'sem o gestor e o selo antigos');
+  // desenhada por último no sd-world (por cima do computador, para o destaque final); feixe só na cópia da frente do satélite
+  assert.ok(svg.indexOf('class="sd-farm"') > svg.indexOf('class="sd-flash"'), 'lupa depois do computador');
+  assert.ok(svg.indexOf('class="sd-farm"') < svg.indexOf('class="sd-packet"'), 'ainda dentro do sd-world');
+  const back = svg.slice(svg.indexOf('class="sd-orbit-back"'), svg.indexOf('class="sd-globe"'));
+  const front = svg.slice(svg.indexOf('class="sd-orbit-front"'), svg.indexOf('<!-- computador'));
+  assert.doesNotMatch(back, /sd-give/);
+  assert.match(front, /<g class="sd-give"><path class="sd-give-beam"[^>]*\/>(<rect class="sd-give-dot"[^>]*\/>){3}<\/g>/);
+});
+
+test('tela vazia: lupa sobre o globo, longe do computador e da mesa; feixe termina no pin', () => {
+  const { cx, cy, r } = lens(), farm = farmMarkup();
+  // dentro do globo (centro 200,130, raio 128) e à esquerda da tela do computador (x 235)
+  assert.ok(Math.hypot(cx - 200, cy - 130) + r < 128 + 8, 'lente sobre o globo');
+  assert.ok(cx + r < 235, 'não cobre o computador');
+  const tag = farm.match(/<g class="sd-lens-tag"><rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/).slice(1).map(Number);
+  assert.ok(tag[0] + tag[2] < 175 || tag[1] + tag[3] < 241, 'selo não encosta na mesa do computador (x >= 175, y >= 241)');
+  assert.ok(tag[1] + tag[3] < 260, 'selo dentro do desenho');
+  // cone liga o pin à lente; o feixe do satélite termina na ponta do pin
+  const pin = farm.match(/<g class="sd-farm-pin"><path d="M([\d.]+) ([\d.]+)/).slice(1).map(Number);
+  assert.match(farm, new RegExp(`<path class="sd-lens-cone" d="M${pin[0]} ${pin[1]}L`));
+  const beam = svgAnim().match(/class="sd-give-beam" d="M105\.8 90L([\d.]+) ([\d.]+)Q([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+)Z"/).slice(1).map(Number);
+  assert.ok(Math.hypot(beam[2] - pin[0], beam[3] - pin[1]) < 6, 'feixe chega no pin');
+});
+
+test('tela vazia: textos da lupa nítidos (lente abre pelo raio, textos entram sem escala, nada ampliado por transform)', () => {
+  assert.match(css.match(/@keyframes sd-lens-open \{[^\n]*\}/)[0], /\{ r: 0px; \}/, 'lente abre animando o raio');
+  for (const k of ['sd-lens-open', 'sd-lens-kpi', 'sd-lens-tag']) assert.doesNotMatch(css.match(new RegExp(String.raw`@keyframes ${k} \{[^\n]*\}`))[0], /scale\(/, k);
+  assert.doesNotMatch(farmMarkup(), /<g transform=/, 'nenhum grupo ampliado por transform');
+  assert.match(css, /\.sd-lens-kpi text \{[^}]*font: 700 3\.7px/);
+  assert.match(css, /\.sd-lens-tag text \{[^}]*font: 700 4\.6px/);
+});
+
+test('tela vazia: ordem do final (flash, feixe, lupa, árvores, varredura e cores, IMA, lema) dentro da pausa', () => {
+  const T = T15(), farm = farmMarkup();
+  const on = (k, prop = 'opacity') => frames(k).filter(([, b]) => new RegExp(String.raw`${prop}: (?!0;)[\d.]+`).test(b)).map(([p]) => p);
+  const flash = frames('sd-cam-flash').filter(([, b]) => /opacity: \.95/.test(b)).map(([p]) => p);
+  assert.equal(flash.length, 2, 'flash na captura e na entrega');
+  const beam = on('sd-give');
+  assert.ok(beam[0] >= flash[1] && beam.at(-1) < PAUSE[1], 'feixe depois do flash e antes de o satélite sair');
+  const open = frames('sd-lens-open'), opened = open.find(([, b]) => !/r: 0px/.test(b))[0], full = open.at(-2)[0];
+  assert.ok(opened > beam[0], 'lupa abre depois que o feixe chega');
+  const delays = cls => [...farm.matchAll(new RegExp(String.raw`<[^>]*class="${cls}[^"]*"[^>]*>`, 'g'))].map(m => +((m[0].match(/animation-delay:([\d.]+)s/) || [0, 0])[1]));
+  const settle = k => frames(k).find(([, b]) => /scaleY\(1\)|opacity: 1|translateY\(0\)/.test(b))[0];
+  const end = (cls, k) => settle(k) + Math.max(...delays(cls)) / T * 100;
+  const treesEnd = end('sd-lens-tree', 'sd-lens-tree'), colorsEnd = end('sd-lens-color', 'sd-lens-color');
+  // início de cada etapa = último quadro ainda no estado inicial
+  const colorStart = frames('sd-lens-color').filter(([, b]) => /opacity: 0;/.test(b)).at(-1)[0];
+  const growStart = frames('sd-lens-tree').filter(([, b]) => /scaleY\(\.05\)/.test(b)).at(-1)[0];
+  assert.ok(growStart >= full - 1, `árvores crescem (${growStart}%) com a lupa aberta (${full}%)`);
+  assert.ok(colorStart >= treesEnd - 3, 'cores chegam depois de as árvores crescerem');
+  const kpi = settle('sd-lens-kpi'), tag = settle('sd-lens-tag');
+  assert.ok(colorsEnd <= kpi + 0.5 && kpi <= tag, `cores (${colorsEnd.toFixed(1)}%) -> IMA (${kpi}%) -> lema (${tag}%)`);
+  assert.ok(tag < PAUSE[1], 'tudo pronto antes de o satélite partir');
+  // satélite fica feliz de novo durante a varredura/IMA
+  const happy = on('sd-happy').filter(p => p > PAUSE[0]);
+  assert.ok(happy.length && happy[0] < PAUSE[1] && happy.at(-1) < PAUSE[1], 'olho feliz de novo na entrega');
+});
+
+test('tela vazia: sem animação (movimento reduzido) a lupa aparece completa: árvores coloridas, IMA e lema; feixe e varredura apagados', () => {
+  assert.match(css, /\.sd-farm \{ opacity: 1; animation: sd-farm var\(--sd-t\)/);
+  assert.match(css, /\.sd-give \{ opacity: 0; animation: sd-give var\(--sd-t\)/);
+  assert.match(css, new RegExp(String.raw`\.sd-lens-r, \.sd-lens-frame \{ r: ${lens().r}px;`), 'raio final no estado base');
+  assert.match(css, /\.sd-lens-scan \{[^}]*opacity: 0;/);
+  for (const cls of ['sd-lens-tree', 'sd-lens-color', 'sd-lens-kpi', 'sd-lens-tag', 'sd-farm-pin'])
+    assert.doesNotMatch(css.match(new RegExp(String.raw`\.${cls} \{[^}]*\}`))[0], /scale|opacity: 0/, cls);
+});
+
+// ---------- destaque final: a lupa vai ampliada para o centro e fica parada para leitura ----------
+test('tela vazia: destaque final (fundo escurece, lupa ampliada no centro com IMA e lema; pin e cone somem)', () => {
+  const farm = farmMarkup();
+  const dim = farm.match(/<rect class="sd-spot-dim" x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"/).slice(1).map(Number);
+  assert.ok(dim[0] < 0 && dim[1] < 0 && dim[0] + dim[2] > 400 && dim[1] + dim[3] > 260, 'fundo escuro cobre a vista toda, inclusive as margens fora do viewBox');
+  // lente, árvores, IMA e lema dentro do grupo ampliado; pin, anel e cone no grupo que some
+  const spot = farm.match(/<g class="sd-spot">([\s\S]*?)\n {12}<\/g>/)[1];
+  for (const cls of ['sd-lens-frame', 'sd-lens-tree', 'sd-lens-kpi', 'sd-lens-tag']) assert.ok(spot.includes(`class="${cls}`), cls);
+  const fade = farm.match(/<g class="sd-spot-fade">([\s\S]*?)\n {12}<\/g>/)[1];
+  for (const cls of ['sd-lens-cone', 'sd-farm-ring', 'sd-farm-pin']) assert.ok(fade.includes(`class="${cls}`), cls);
+  // ampliação: centro da lente vai para perto do centro da vista; lente inteira e lema dentro do desenho
+  const { cx, cy, r } = lens();
+  const [ox, oy] = css.match(/\.sd-spot \{ transform-origin: ([\d.]+)px ([\d.]+)px;/).slice(1).map(Number);
+  assert.deepEqual([ox, oy], [cx, cy], 'amplia em torno do centro da lente');
+  const z = css.match(/@keyframes sd-spot \{[^\n]*translate\((-?[\d.]+)px, (-?[\d.]+)px\) scale\(([\d.]+)\)/).slice(1).map(Number);
+  const [nx, ny, k] = [cx + z[0], cy + z[1], z[2]];
+  assert.ok(k >= 1.8, `ampliação ${k}x`);
+  assert.ok(Math.abs(nx - 200) < 10 && Math.abs(ny - 130) < 15, `centro da lente no meio da vista (${nx}, ${ny})`);
+  assert.ok(ny - r * k > 0 && nx - r * k > 0 && nx + r * k < 400, 'lente inteira na vista');
+  const tag = farm.match(/<g class="sd-lens-tag"><rect x="[\d.]+" y="([\d.]+)" width="[\d.]+" height="([\d.]+)"/).slice(1).map(Number);
+  assert.ok(ny + (tag[0] + tag[1] - cy) * k < 260, 'lema dentro da vista no destaque');
+  // texto efetivo no destaque (fonte x ampliação) grande o bastante para ler
+  const font = cls => +css.match(new RegExp(String.raw`\.${cls} text \{[^}]*font: 700 ([\d.]+)px`))[1];
+  assert.ok(font('sd-lens-kpi') * k >= 7 && font('sd-lens-tag') * k >= 8.5, 'IMA e lema legíveis no destaque');
+});
+
+test('tela vazia: destaque fica parado tempo suficiente para ler e só começa depois que o satélite sumiu', () => {
+  const T = T15(), sec = p => p / 100 * T;
+  const spot = frames('sd-spot'), zoomed = sec(spot.find(([, b]) => /scale\(/.test(b))[0]);
+  const spotStart = sec(spot.filter(([, b]) => /transform: none/.test(b)).at(-1)[0]);
+  const farmOut = sec(frames('sd-farm').filter(([, b]) => /opacity: 1/.test(b)).at(-1)[0]);
+  assert.ok(farmOut - zoomed >= 2.2, `lupa ampliada parada por ${(farmOut - zoomed).toFixed(2)} s`);
+  // lema já apareceu antes do destaque
+  const tagIn = sec(frames('sd-lens-tag').find(([, b]) => /opacity: 1/.test(b))[0]);
+  assert.ok(tagIn < spotStart, 'lema aparece antes do destaque');
+  // satélite: cópia da frente já saiu e a de trás some atrás da Terra antes do destaque (nada parado na borda)
+  const lastOn = k => sec(frames(k).filter(([, b]) => /opacity: 1/.test(b)).at(-1)[0]);
+  // (a cópia de trás termina de passar atrás da Terra já sob o fundo escuro, enquanto a lupa amplia)
+  assert.ok(lastOn('sd-orbit-front') <= spotStart && lastOn('sd-orbit-back') <= zoomed, 'satélite fora de cena no destaque');
+  assert.match(frames('sd-orbit-back').at(-1)[1], /opacity: 0/, 'cópia de trás termina invisível');
+  // pin e cone somem no começo do destaque; fundo escurece junto
+  assert.ok(Math.abs(sec(frames('sd-spot-fade').filter(([, b]) => /opacity: 1/.test(b)).at(-1)[0]) - spotStart) < 0.05);
+  assert.ok(Math.abs(sec(frames('sd-spot-dim').filter(([, b]) => /opacity: 0;/.test(b)).at(-1)[0]) - spotStart) < 0.05);
+});
+
+test('tela vazia: sem animação (movimento reduzido) não há fundo escuro nem ampliação', () => {
+  assert.match(css, /\.sd-spot-dim \{[^}]*opacity: 0;/);
+  assert.doesNotMatch(css.match(/\.sd-spot \{[^}]*\}/)[0], /transform:/, 'lupa no lugar original');
+  assert.doesNotMatch(css.match(/\.sd-spot-fade \{[^}]*\}/)[0], /opacity: 0/, 'pin e cone visíveis');
+});
+
+test('tela vazia: sensores são o dendrômetro da Treevia, presos no tronco perto do chão (DAP, ~1,30 m)', () => {
+  const trees = [...farmMarkup().matchAll(/<g class="sd-lens-tree" style="transform-origin:([\d.]+)px ([\d.]+)px[^"]*">([\s\S]*?)<\/g><\/g>/g)]
+    .map(m => ({ x: +m[1], ground: +m[2], body: m[3] }));
+  const withSensor = trees.filter(t => t.body.includes('sd-lens-sensor'));
+  assert.equal(withSensor.length, 2);
+  for (const t of withSensor) {
+    const s = t.body.slice(t.body.indexOf('<g class="sd-lens-sensor">'));
+    // visual do dendrômetro real: caixa em gota com lateral; logo SÓ de losangos em pirâmide (1-2-3-2), sem "U"; nada do quadrado com LED
+    for (const cls of ['sd-dendro-case', 'sd-dendro-side', 'sd-dendro-logo', 'sd-dendro-strap', 'sd-lens-ping']) assert.ok(s.includes(`class="${cls}"`), cls);
+    assert.doesNotMatch(s, /<rect|sd-lens-led|sd-dendro-u/);
+    const dia = [...s.match(/class="sd-dendro-logo" d="([^"]+)"/)[1].matchAll(/M(-?[\d.]+) (-?[\d.]+)l/g)].map(m => [+m[1], +m[2]]);
+    assert.equal(dia.length, 8, '8 losangos');
+    // quantos losangos por fileira (y do topo de cada losango), de cima para baixo
+    const perRow = new Map();
+    for (const [, y] of dia) perRow.set(y.toFixed(2), (perRow.get(y.toFixed(2)) || 0) + 1);
+    const rows = [...perRow].sort((a, b) => a[0] - b[0]).map(([, n]) => n);
+    assert.deepEqual(rows, [1, 2, 3, 2], 'fileiras 1-2-3-2 de cima para baixo');
+    // no tronco: centrado no x da árvore, abaixo da copa e com a base logo acima do chão
+    const ys = [...s.match(/class="sd-dendro-case" d="([^"]+)"/)[1].matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map(m => +m[2]);
+    const xs = [...s.match(/class="sd-dendro-case" d="([^"]+)"/)[1].matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map(m => +m[1]);
+    const [top, bottom] = [Math.min(...ys), Math.max(...ys)];
+    assert.ok(Math.abs((Math.min(...xs) + Math.max(...xs)) / 2 - t.x) < 0.01, 'centrado no tronco');
+    const crownBottom = Math.max(...[...t.body.matchAll(/class="sd-lens-crown" cx="[\d.]+" cy="([\d.]+)" rx="[\d.]+" ry="([\d.]+)"/g)].map(m => +m[1] + +m[2]));
+    assert.ok(top > crownBottom, `abaixo da copa (topo ${top}, copa até ${crownBottom.toFixed(1)})`);
+    assert.ok(bottom < t.ground && t.ground - bottom < 1.5, `logo acima do chão (base ${bottom}, chão ${t.ground})`);
+  }
+  assert.match(css, /\.sd-dendro-case \{ fill: #7e3522;/, 'caixa marrom');
+  assert.match(css, /\.sd-dendro-logo \{ fill: #b6f227;/, 'logo verde-limão');
+});
