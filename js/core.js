@@ -639,16 +639,6 @@ async function pickCandidate(cands, from, { tol, check, show, alive, onUpdate = 
   return -1;
 }
 
-// Cena da animação da tela vazia pedida na URL (?anim=calc | ?anim=mapa); null = manter a do HTML
-const ANIM_SCENES = {
-  calc: 'Satélite enviando dados que viram cálculos de inventário no computador',
-  mapa: 'Satélite enviando dados que viram um mapa no computador',
-};
-function animScene(search) {
-  const v = (new URLSearchParams(search).get('anim') || '').toLowerCase();
-  return v in ANIM_SCENES ? v : null;
-}
-
 // Texto seguro dentro de HTML (inclusive em atributos entre aspas)
 function escHtml(t) { return String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 // Dia no fuso do usuário (toISOString daria o dia UTC: no Brasil, depois das 21h já seria amanhã)
@@ -886,7 +876,7 @@ function zipFile(name, buf) {
 
 globalThis.Core = {
   SENSORS, MODIS_SINU, readVectorFiles, zipFile, parseKML, parseGeoJSON, stacSearch, searchRange, orderCandidates, checkCandidate, pickCandidate, loadImage,
-  escHtml, localDay, sceneDate, animScene, ANIM_SCENES,
+  escHtml, localDay, sceneDate,
   buildGeoTIFF, percentiles, previewScale, maxZoom, fitView, clampView, viewTransform, zoomAt, panBy, canvasToPixel, pixelValues, pixelLonLat, hasNdvi, ndvi, ndviAt, ndviColor, NDVI_STOPS, addDays, isoDay, crsLabel, isGeographic,
   // expostos para os testes
   ensureProj, projectPolys, pointInRing, footprintContains, rasterize, signHref, assetOf, gridOf, epsgOf, itemDates,

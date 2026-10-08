@@ -4,13 +4,6 @@ const state = { geo: null, fileBase: 'talhoes', cands: [], idx: -1, img: null, r
 
 $('date').value = Core.localDay(new Date());
 
-// animação da tela vazia: o HTML define a cena padrão; ?anim=mapa ou ?anim=calc na URL troca
-const animScene = Core.animScene(location.search);
-if (animScene) {
-  const svg = document.querySelector('.sd-anim');
-  svg.dataset.scene = animScene;
-  svg.setAttribute('aria-label', Core.ANIM_SCENES[animScene]);
-}
 
 // ---------- satélite ----------
 // Sentinel-2 e Landsat 8/9 ficam no seletor; os secundários em "Outros", como cartões com resolução e finalidade
