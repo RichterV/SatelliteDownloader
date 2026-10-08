@@ -347,7 +347,7 @@ test('tela vazia: sem animação (movimento reduzido) a tela de cálculos fica c
     assert.doesNotMatch(css.match(new RegExp(String.raw`\.${cls} \{[^}]*\}`))[0], /transform: scale\(0\)|opacity: 0/, cls);
 });
 
-test('tela vazia: números rolam até os valores da plataforma (8.143, 2.891, 0.336)', () => {
+test('tela vazia: números rolam até os valores da plataforma (8.143, 2.891, 0.960)', () => {
   const step = +css.match(/@keyframes sd-calc-odo \{[^\n]*translateY\(-([\d.]+)px\)/)[1];
   const odos = [...calcMarkup().matchAll(/<g clip-path="url\(#(sd-odo-clip-\d)\)"><g class="sd-calc-odo"[^>]*>(.*?)<\/g><\/g>/g)];
   assert.equal(odos.length, 3);
@@ -360,7 +360,7 @@ test('tela vazia: números rolam até os valores da plataforma (8.143, 2.891, 0.
     assert.equal(shown.length, 1, clip);
     return shown[0][1];
   });
-  assert.deepEqual(finals, ['8.143', '2.891', '0.336']);
+  assert.deepEqual(finals, ['8.143', '2.891', '0.960']);
 });
 
 test('tela vazia: pontos dos gráficos dentro das áreas de plotagem e linhas crescendo a partir do início', () => {
@@ -431,7 +431,7 @@ test('tela vazia: final com lupa sobre o talhão (árvores, sensores, cores de p
   // sensores Treevia presos nos troncos (dentro do grupo da árvore: crescem junto)
   assert.equal((farm.match(/class="sd-lens-sensor"/g) || []).length, 2);
   assert.match(farm, /<g class="sd-lens-tree"[^>]*>(?:(?!<g class="sd-lens-tree")[\s\S])*?class="sd-lens-sensor"/, 'sensor dentro de uma árvore');
-  assert.match(farm, /<text[^>]*>IMA 38,4 m³\/ha\/ano <tspan>▲<\/tspan><\/text>/);
+  assert.match(farm, /<text[^>]*>IMA 42 m³\/ha\/ano <tspan>▲<\/tspan><\/text>/);
   assert.match(farm, /<text[^>]*>Dados que geram resultado<\/text>/, 'lema da Treevia');
   assert.doesNotMatch(svg, /sd-farmer|sd-badge|sd-wave/, 'sem o gestor e o selo antigos');
   // desenhada por último no sd-world (por cima do computador, para o destaque final); feixe só na cópia da frente do satélite
@@ -580,4 +580,21 @@ test('tela vazia: sensores são o dendrômetro da Treevia, presos no tronco pert
   }
   assert.match(css, /\.sd-dendro-case \{ fill: #7e3522;/, 'caixa marrom');
   assert.match(css, /\.sd-dendro-logo \{ fill: #b6f227;/, 'logo verde-limão');
+});
+
+test('tela vazia: gráficos coerentes com R² (LOO) 0,96 (pontos colados à reta 1:1, resíduos pequenos)', () => {
+  const calc = calcMarkup();
+  assert.match(calc, /R² \(LOO\): 0\.96</, 'rótulo do gráfico igual ao cartão');
+  const plots = [...calc.matchAll(/<rect class="sd-calc-plot" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)].map(m => m.slice(1).map(Number));
+  const dots = [...calc.matchAll(/<circle class="sd-calc-dot" cx="([\d.]+)" cy="([\d.]+)"/g)].map(m => [+m[1], +m[2]]);
+  const [L, R] = plots;
+  const left = dots.filter(([x]) => x > L[0] && x < L[0] + L[2]), right = dots.filter(([x]) => x > R[0] && x < R[0] + R[2]);
+  // diagonal 1:1 vai do canto inferior esquerdo ao superior direito da área de plotagem
+  const diagY = x => L[1] + L[3] - (x - L[0]) / L[2] * L[3];
+  const dev = left.map(([x, y]) => Math.abs(y - diagY(x)));
+  assert.ok(dev.reduce((a, b) => a + b, 0) / dev.length < 1.2, `pontos perto da diagonal (desvio médio ${(dev.reduce((a, b) => a + b, 0) / dev.length).toFixed(2)})`);
+  // resíduos: linha do zero e pontos próximos dela
+  const zero = +calc.match(/<path class="sd-calc-zero" d="M[\d.]+ ([\d.]+)H/)[1];
+  const res = right.map(([, y]) => Math.abs(y - zero));
+  assert.ok(Math.max(...res) < 4, `resíduos pequenos (máx ${Math.max(...res).toFixed(2)})`);
 });
