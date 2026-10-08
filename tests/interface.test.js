@@ -52,7 +52,15 @@ test('versões das libs da CDN = versões testadas (package.json)', () => {
 test('card de preview (Open Graph) aponta para imagem existente', () => {
   const og = html.match(/property="og:image" content="([^"]+)"/)?.[1];
   assert.ok(og && og.startsWith('https://'), 'og:image precisa de URL absoluta');
-  assert.ok(fs.existsSync(path.join(ROOT, path.basename(og))));
+  // ?v=N no endereço força WhatsApp/Teams/LinkedIn a buscar o card novo; o arquivo é o mesmo
+  assert.ok(fs.existsSync(path.join(ROOT, path.basename(og.split('?')[0]))));
+  const tw = html.match(/name="twitter:image" content="([^"]+)"/)?.[1];
+  assert.equal(tw, og, 'twitter:image igual ao og:image');
+  assert.match(html, /property="og:image:alt" content="[^"]+"/);
+  // card no tamanho recomendado (1200 x 630): largura e altura no cabeçalho do PNG
+  const png = fs.readFileSync(path.join(ROOT, 'og-image.png'));
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [1200, 630]);
+  assert.ok(png.length < 600 * 1024, 'leve o bastante para o WhatsApp');
 });
 
 test('header mostra o logo da Treevia ao lado do nome do app', () => {
