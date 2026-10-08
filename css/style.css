@@ -305,8 +305,13 @@ input:disabled { opacity: .5; }
 .sd-lens-color { animation: sd-lens-color var(--sd-t) linear infinite; }
 .sd-lens-color ellipse { stroke: var(--ink); stroke-width: .4; }
 .sd-prod-high ellipse { fill: #1f7a46; } .sd-prod-mid ellipse { fill: #4caf73; } .sd-prod-low ellipse { fill: #c4d36a; }
-.sd-lens-sensor rect { fill: #fff; stroke: var(--ink); stroke-width: .35; }
-.sd-lens-led { fill: #2fd27a; animation: sd-blink 1s steps(2) infinite; }
+/* dendrômetro da Treevia: caixa marrom em gota com o logo verde-limão, preso no tronco por uma cinta */
+.sd-dendro-strap { fill: none; stroke: #3a2a1d; stroke-width: .7; stroke-linecap: round; }
+.sd-dendro-side { fill: #4a1c10; stroke: var(--ink); stroke-width: .35; }
+.sd-dendro-case { fill: #7e3522; stroke: var(--ink); stroke-width: .4; }
+.sd-dendro-shine { fill: none; stroke: #b1634a; stroke-width: .35; stroke-linecap: round; }
+.sd-dendro-logo { fill: #b6f227; }
+.sd-dendro-u { fill: none; stroke: #b6f227; stroke-width: .5; stroke-linecap: round; }
 .sd-lens-ping { fill: none; stroke: #2fd27a; stroke-width: .4; animation: sd-lens-ping 1.2s ease-out infinite; }
 .sd-lens-scan { fill: rgba(123, 227, 160, .6); opacity: 0; animation: sd-lens-scan var(--sd-t) linear infinite; }
 .sd-lens-kpi { animation: sd-lens-kpi var(--sd-t) ease-out infinite; }
@@ -536,7 +541,7 @@ input:disabled { opacity: .5; }
 @keyframes sd-lens-scan { 0%, 69.712% { transform: translateX(0); opacity: 0; } 69.843% { opacity: 1; } 72.62% { transform: translateX(84px); opacity: 1; } 72.743%, 100% { transform: translateX(84px); opacity: 0; } }
 @keyframes sd-lens-kpi { 0%, 72.62% { opacity: 0; transform: translateY(2.5px); } 73.859%, 100% { opacity: 1; transform: translateY(0); } }
 @keyframes sd-lens-tag { 0%, 73.239% { opacity: 0; transform: translateY(3px); } 74.478%, 100% { opacity: 1; transform: translateY(0); } }
-@keyframes sd-lens-ping { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(4); opacity: 0; } }
+@keyframes sd-lens-ping { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(2.3); opacity: 0; } }
 /* cena de cálculos (porcentagens do ciclo de --sd-t = 15 s; a tela aparece inteira em 45,33% e começa a sumir em 61,19%) */
 @keyframes sd-calc-pop { 0%, 33.316% { transform: scale(0); } 34.92% { transform: scale(1.18); } 35.726%, 100% { transform: scale(1); } }
 @keyframes sd-calc-type { 0%, 33.714% { transform: translateX(0); } 38.934%, 100% { transform: translateX(90px); } }

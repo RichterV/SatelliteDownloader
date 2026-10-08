@@ -519,3 +519,26 @@ test('tela vazia: sem animação (movimento reduzido) não há fundo escuro nem 
   assert.doesNotMatch(css.match(/\.sd-spot \{[^}]*\}/)[0], /transform:/, 'lupa no lugar original');
   assert.doesNotMatch(css.match(/\.sd-spot-fade \{[^}]*\}/)[0], /opacity: 0/, 'pin e cone visíveis');
 });
+
+test('tela vazia: sensores são o dendrômetro da Treevia, presos no tronco perto do chão (DAP, ~1,30 m)', () => {
+  const trees = [...farmMarkup().matchAll(/<g class="sd-lens-tree" style="transform-origin:([\d.]+)px ([\d.]+)px[^"]*">([\s\S]*?)<\/g><\/g>/g)]
+    .map(m => ({ x: +m[1], ground: +m[2], body: m[3] }));
+  const withSensor = trees.filter(t => t.body.includes('sd-lens-sensor'));
+  assert.equal(withSensor.length, 2);
+  for (const t of withSensor) {
+    const s = t.body.slice(t.body.indexOf('<g class="sd-lens-sensor">'));
+    // visual do dendrômetro real: caixa em gota com lateral, logo em losangos verde-limão; nada do quadrado com LED
+    for (const cls of ['sd-dendro-case', 'sd-dendro-side', 'sd-dendro-logo', 'sd-dendro-u', 'sd-dendro-strap', 'sd-lens-ping']) assert.ok(s.includes(`class="${cls}"`), cls);
+    assert.doesNotMatch(s, /<rect|sd-lens-led/);
+    // no tronco: centrado no x da árvore, abaixo da copa e com a base logo acima do chão
+    const ys = [...s.match(/class="sd-dendro-case" d="([^"]+)"/)[1].matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map(m => +m[2]);
+    const xs = [...s.match(/class="sd-dendro-case" d="([^"]+)"/)[1].matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map(m => +m[1]);
+    const [top, bottom] = [Math.min(...ys), Math.max(...ys)];
+    assert.ok(Math.abs((Math.min(...xs) + Math.max(...xs)) / 2 - t.x) < 0.01, 'centrado no tronco');
+    const crownBottom = Math.max(...[...t.body.matchAll(/class="sd-lens-crown" cx="[\d.]+" cy="([\d.]+)" rx="[\d.]+" ry="([\d.]+)"/g)].map(m => +m[1] + +m[2]));
+    assert.ok(top > crownBottom, `abaixo da copa (topo ${top}, copa até ${crownBottom.toFixed(1)})`);
+    assert.ok(bottom < t.ground && t.ground - bottom < 1.5, `logo acima do chão (base ${bottom}, chão ${t.ground})`);
+  }
+  assert.match(css, /\.sd-dendro-case \{ fill: #7e3522;/, 'caixa marrom');
+  assert.match(css, /\.sd-dendro-logo \{ fill: #b6f227; \}/, 'logo verde-limão');
+});
