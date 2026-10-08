@@ -527,9 +527,16 @@ test('tela vazia: sensores são o dendrômetro da Treevia, presos no tronco pert
   assert.equal(withSensor.length, 2);
   for (const t of withSensor) {
     const s = t.body.slice(t.body.indexOf('<g class="sd-lens-sensor">'));
-    // visual do dendrômetro real: caixa em gota com lateral, logo em losangos verde-limão; nada do quadrado com LED
-    for (const cls of ['sd-dendro-case', 'sd-dendro-side', 'sd-dendro-logo', 'sd-dendro-u', 'sd-dendro-strap', 'sd-lens-ping']) assert.ok(s.includes(`class="${cls}"`), cls);
-    assert.doesNotMatch(s, /<rect|sd-lens-led/);
+    // visual do dendrômetro real: caixa em gota com lateral; logo SÓ de losangos em pirâmide (1-2-3-2), sem "U"; nada do quadrado com LED
+    for (const cls of ['sd-dendro-case', 'sd-dendro-side', 'sd-dendro-logo', 'sd-dendro-strap', 'sd-lens-ping']) assert.ok(s.includes(`class="${cls}"`), cls);
+    assert.doesNotMatch(s, /<rect|sd-lens-led|sd-dendro-u/);
+    const dia = [...s.match(/class="sd-dendro-logo" d="([^"]+)"/)[1].matchAll(/M(-?[\d.]+) (-?[\d.]+)l/g)].map(m => [+m[1], +m[2]]);
+    assert.equal(dia.length, 8, '8 losangos');
+    // quantos losangos por fileira (y do topo de cada losango), de cima para baixo
+    const perRow = new Map();
+    for (const [, y] of dia) perRow.set(y.toFixed(2), (perRow.get(y.toFixed(2)) || 0) + 1);
+    const rows = [...perRow].sort((a, b) => a[0] - b[0]).map(([, n]) => n);
+    assert.deepEqual(rows, [1, 2, 3, 2], 'fileiras 1-2-3-2 de cima para baixo');
     // no tronco: centrado no x da árvore, abaixo da copa e com a base logo acima do chão
     const ys = [...s.match(/class="sd-dendro-case" d="([^"]+)"/)[1].matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map(m => +m[2]);
     const xs = [...s.match(/class="sd-dendro-case" d="([^"]+)"/)[1].matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map(m => +m[1]);
@@ -540,5 +547,5 @@ test('tela vazia: sensores são o dendrômetro da Treevia, presos no tronco pert
     assert.ok(bottom < t.ground && t.ground - bottom < 1.5, `logo acima do chão (base ${bottom}, chão ${t.ground})`);
   }
   assert.match(css, /\.sd-dendro-case \{ fill: #7e3522;/, 'caixa marrom');
-  assert.match(css, /\.sd-dendro-logo \{ fill: #b6f227; \}/, 'logo verde-limão');
+  assert.match(css, /\.sd-dendro-logo \{ fill: #b6f227;/, 'logo verde-limão');
 });

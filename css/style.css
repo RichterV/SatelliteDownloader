@@ -310,8 +310,7 @@ input:disabled { opacity: .5; }
 .sd-dendro-side { fill: #4a1c10; stroke: var(--ink); stroke-width: .35; }
 .sd-dendro-case { fill: #7e3522; stroke: var(--ink); stroke-width: .4; }
 .sd-dendro-shine { fill: none; stroke: #b1634a; stroke-width: .35; stroke-linecap: round; }
-.sd-dendro-logo { fill: #b6f227; }
-.sd-dendro-u { fill: none; stroke: #b6f227; stroke-width: .5; stroke-linecap: round; }
+.sd-dendro-logo { fill: #b6f227; stroke: #b6f227; stroke-width: .12; stroke-linejoin: round; }
 .sd-lens-ping { fill: none; stroke: #2fd27a; stroke-width: .4; animation: sd-lens-ping 1.2s ease-out infinite; }
 .sd-lens-scan { fill: rgba(123, 227, 160, .6); opacity: 0; animation: sd-lens-scan var(--sd-t) linear infinite; }
 .sd-lens-kpi { animation: sd-lens-kpi var(--sd-t) ease-out infinite; }
