@@ -283,28 +283,35 @@ input:disabled { opacity: .5; }
 .sd-give-dot { fill: #b8f5cf; stroke: #2f7d4f; stroke-width: .3; animation: sd-give-dot .5s linear infinite; }
 .sd-farm { opacity: 1; animation: sd-farm var(--sd-t) linear infinite; }
 .sd-farm-ring { fill: none; stroke: #7be3a0; stroke-width: .8; opacity: 0; animation: sd-farm-ring var(--sd-t) ease-out infinite; }
-.sd-farm-pop { animation: sd-farm-pop var(--sd-t) ease-out infinite; }
-.sd-farm-plot path { stroke: var(--ink); stroke-width: .5; stroke-linejoin: round; }
-.sd-farm-plot .p1 { fill: #5cbf83; } .sd-farm-plot .p2 { fill: #3e9b63; } .sd-farm-plot .p3 { fill: #8fd3a5; } .sd-farm-plot .p4 { fill: #2f7d4f; }
-.sd-farm-tree { fill: #2f7d4f; stroke: #1d4d31; stroke-width: .3; animation: sd-farm-tree var(--sd-t) ease-out infinite; }
 .sd-farm-pin { animation: sd-farm-pin var(--sd-t) ease-out infinite; }
-.sd-farm-pin path { fill: #e5484d; stroke: var(--ink); stroke-width: .6; }
+.sd-farm-pin path { fill: #e5484d; stroke: var(--ink); stroke-width: .8; }
 .sd-farm-pin circle { fill: #fff; }
-.sd-farmer { animation: sd-farmer var(--sd-t) ease-out infinite; }
-.sd-farmer-shadow { fill: rgba(0, 0, 0, .25); }
-.sd-farmer-legs { fill: none; stroke: #34423b; stroke-width: 1.2; stroke-linecap: round; }
-.sd-farmer-body { fill: #8dc63f; stroke: var(--ink); stroke-width: .5; }
-.sd-farmer-skin { fill: #f1c9a0; stroke: var(--ink); stroke-width: .45; }
-.sd-farmer-helmet { fill: #ffd23f; stroke: var(--ink); stroke-width: .45; stroke-linejoin: round; }
-.sd-farmer-sleeve { fill: none; stroke: #8dc63f; stroke-width: 1.5; stroke-linecap: round; }
-.sd-farmer-arm { animation: sd-wave var(--sd-t) ease-in-out infinite; }
-.sd-wave-lines { fill: none; stroke: #ffd23f; stroke-width: .5; stroke-linecap: round; opacity: 0; animation: sd-wave-lines var(--sd-t) linear infinite; }
-.sd-tablet { fill: #1f3b63; stroke: var(--ink); stroke-width: .35; }
-.sd-tablet-line { fill: none; stroke: #7be3a0; stroke-width: .35; stroke-linecap: round; }
-.sd-badge { animation: sd-badge var(--sd-t) ease-out infinite; }
-.sd-badge rect { fill: #fff; stroke: #2f7d4f; stroke-width: .7; }
-.sd-badge text { font: 700 4.4px system-ui, sans-serif; fill: #1f3b63; text-anchor: middle; text-rendering: geometricPrecision; }
-.sd-badge tspan { fill: #2f7d4f; }
+
+/* lupa sobre a fazenda: abre pelo raio do círculo (sem escala, para os textos ficarem nítidos) */
+.sd-lens-r, .sd-lens-frame { r: 40px; animation: sd-lens-open var(--sd-t) ease-out infinite; }
+.sd-lens-frame { fill: none; stroke: var(--ink); stroke-width: 1.6; }
+.sd-lens-cone { fill: rgba(184, 245, 207, .22); stroke: rgba(184, 245, 207, .55); stroke-width: .5; stroke-linejoin: round; animation: sd-lens-cone var(--sd-t) linear infinite; }
+.sd-lens-sky { fill: #d9eff8; }
+.sd-lens-hill { fill: #bfe3c6; }
+.sd-lens-ground { fill: #9ccf7c; }
+.sd-lens-row { fill: none; stroke: #86b866; stroke-width: .6; stroke-dasharray: 2 1.6; }
+.sd-lens-tree { animation: sd-lens-tree var(--sd-t) ease-out infinite; }
+.sd-lens-trunk { fill: #e8dcc6; stroke: var(--ink); stroke-width: .35; stroke-linejoin: round; }
+.sd-lens-crown { fill: #8fa99a; stroke: var(--ink); stroke-width: .4; }
+.sd-lens-color { animation: sd-lens-color var(--sd-t) linear infinite; }
+.sd-lens-color ellipse { stroke: var(--ink); stroke-width: .4; }
+.sd-prod-high ellipse { fill: #1f7a46; } .sd-prod-mid ellipse { fill: #4caf73; } .sd-prod-low ellipse { fill: #c4d36a; }
+.sd-lens-sensor rect { fill: #fff; stroke: var(--ink); stroke-width: .35; }
+.sd-lens-led { fill: #2fd27a; animation: sd-blink 1s steps(2) infinite; }
+.sd-lens-ping { fill: none; stroke: #2fd27a; stroke-width: .4; animation: sd-lens-ping 1.2s ease-out infinite; }
+.sd-lens-scan { fill: rgba(123, 227, 160, .6); opacity: 0; animation: sd-lens-scan var(--sd-t) linear infinite; }
+.sd-lens-kpi { animation: sd-lens-kpi var(--sd-t) ease-out infinite; }
+.sd-lens-kpi rect { fill: #fff; stroke: #2f7d4f; stroke-width: .5; }
+.sd-lens-kpi text { font: 700 3.7px system-ui, sans-serif; fill: #1f3b63; text-anchor: middle; text-rendering: geometricPrecision; }
+.sd-lens-kpi tspan { fill: #2f9e5b; }
+.sd-lens-tag { animation: sd-lens-tag var(--sd-t) ease-out infinite; }
+.sd-lens-tag rect { fill: #2f7d4f; stroke: var(--ink); stroke-width: .6; }
+.sd-lens-tag text { font: 700 4.6px system-ui, sans-serif; fill: #fff; text-anchor: middle; text-rendering: geometricPrecision; }
 
 /* pacote e mini-gráfico */
 .sd-packet { opacity: 0; animation: sd-drop var(--sd-t) linear infinite; }
@@ -513,12 +520,14 @@ input:disabled { opacity: .5; }
 @keyframes sd-farm { 0%, 78.752% { opacity: 0; } 79.139%, 96.961% { opacity: 1; } 99.237%, 100% { opacity: 0; } }
 @keyframes sd-farm-ring { 0%, 79.139% { transform: scale(.3); opacity: 0; } 79.742% { opacity: .9; } 82.553%, 100% { transform: scale(2.8); opacity: 0; } }
 @keyframes sd-farm-pin { 0%, 79.139% { transform: translateY(-14px); opacity: 0; } 80.277% { transform: translateY(1px); opacity: 1; } 81.028%, 100% { transform: translateY(0); opacity: 1; } }
-@keyframes sd-farm-pop { 0%, 80.277% { transform: scale(0); } 81.483% { transform: scale(1.2); } 82.246%, 100% { transform: scale(1); } }
-@keyframes sd-farm-tree { 0%, 81.791% { transform: scale(0); } 84.636%, 100% { transform: scale(1); } }
-@keyframes sd-farmer { 0%, 83.304% { transform: scale(0); } 84.294% { transform: scale(1.15); } 84.977%, 100% { transform: scale(1); } }
-@keyframes sd-wave { 0%, 84.829% { transform: rotate(0deg); } 85.546% { transform: rotate(-24deg); } 86.229% { transform: rotate(10deg); } 86.912% { transform: rotate(-24deg); } 87.595% { transform: rotate(10deg); } 88.278% { transform: rotate(-24deg); } 88.961%, 100% { transform: rotate(0deg); } }
-@keyframes sd-wave-lines { 0%, 84.829% { opacity: 0; } 85.432%, 88.505% { opacity: 1; } 89.188%, 100% { opacity: 0; } }
-@keyframes sd-badge { 0%, 84.829% { opacity: 0; transform: translateY(3px); } 85.888% { opacity: 1; transform: translateY(-.6px); } 86.571%, 100% { opacity: 1; transform: translateY(0); } }
+@keyframes sd-lens-open { 0%, 80.42% { r: 0px; } 82.4% { r: 42.5px; } 83.31%, 100% { r: 40px; } }
+@keyframes sd-lens-cone { 0%, 80.58% { opacity: 0; } 82.32%, 100% { opacity: 1; } }
+@keyframes sd-lens-tree { 0%, 82.32% { transform: scaleY(.05); } 84.26% { transform: scaleY(1.06); } 84.75%, 100% { transform: scaleY(1); } }
+@keyframes sd-lens-color { 0%, 85.74% { opacity: 0; } 86.34%, 100% { opacity: 1; } }
+@keyframes sd-lens-scan { 0%, 85.58% { transform: translateX(0); opacity: 0; } 85.74% { opacity: 1; } 89.15% { transform: translateX(84px); opacity: 1; } 89.3%, 100% { transform: translateX(84px); opacity: 0; } }
+@keyframes sd-lens-kpi { 0%, 89.15% { opacity: 0; transform: translateY(2.5px); } 90.67%, 100% { opacity: 1; transform: translateY(0); } }
+@keyframes sd-lens-tag { 0%, 89.91% { opacity: 0; transform: translateY(3px); } 91.43%, 100% { opacity: 1; transform: translateY(0); } }
+@keyframes sd-lens-ping { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(4); opacity: 0; } }
 /* cena de cálculos (porcentagens do ciclo de --sd-t = 15 s; a tela aparece inteira em 45,33% e começa a sumir em 61,19%) */
 @keyframes sd-calc-pop { 0%, 40.899% { transform: scale(0); } 42.868% { transform: scale(1.18); } 43.858%, 100% { transform: scale(1); } }
 @keyframes sd-calc-type { 0%, 41.388% { transform: translateX(0); } 47.796%, 100% { transform: translateX(90px); } }
