@@ -457,13 +457,19 @@ test('tela vazia: queda do pacote e zooms rápidos', () => {
 // ---------- final: lupa sobre o talhão ("Dados que geram resultado") ----------
 const farmMarkup = () => svgAnim().match(/<g class="sd-farm">[\s\S]*?\n {10}<\/g>/)[0];
 const lens = () => { const m = farmMarkup().match(/<circle class="sd-lens-frame" cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/); return { cx: +m[1], cy: +m[2], r: +m[3] }; };
+// árvores da lupa: cada uma vai do seu início até o início da próxima (ou até a varredura), sem depender de onde os grupos fecham
+const lensTrees = () => {
+  const farm = farmMarkup(), end = farm.indexOf('<rect class="sd-lens-scan"');
+  const starts = [...farm.matchAll(/<g class="sd-lens-tree" style="transform-origin:([\d.]+)px ([\d.]+)px[^"]*">/g)];
+  return starts.map((m, k) => ({ x: +m[1], ground: +m[2], body: farm.slice(m.index + m[0].length, k + 1 < starts.length ? starts[k + 1].index : end) }));
+};
 
 test('tela vazia: final com lupa sobre o talhão (árvores, sensores, cores de produtividade, IMA e "Dados que geram resultado")', () => {
   const svg = svgAnim(), farm = farmMarkup();
   assert.match(farm, /<clipPath id="sd-lens-clip"><circle class="sd-lens-r"/, 'lente recorta o talhão');
   for (const cls of ['sd-lens-cone', 'sd-farm-pin', 'sd-farm-ring', 'sd-lens-sky', 'sd-lens-ground', 'sd-lens-scan', 'sd-lens-frame', 'sd-lens-kpi', 'sd-lens-tag'])
     assert.ok(farm.includes(`class="${cls}"`), cls);
-  const trees = [...farm.matchAll(/<g class="sd-lens-tree"[^>]*>([\s\S]*?)<\/g><\/g>/g)].map(m => m[1]);
+  const trees = lensTrees().map(t => t.body);
   assert.ok(trees.length >= 6, `árvores (${trees.length})`);
   // cada árvore ganha uma cor de produtividade; as três classes aparecem
   const prods = trees.map(t => (t.match(/sd-prod-(high|mid|low)/) || [])[1]);
@@ -473,7 +479,8 @@ test('tela vazia: final com lupa sobre o talhão (árvores, sensores, cores de p
   assert.equal((farm.match(/class="sd-lens-sensor"/g) || []).length, 2);
   assert.match(farm, /<g class="sd-lens-tree"[^>]*>(?:(?!<g class="sd-lens-tree")[\s\S])*?class="sd-lens-sensor"/, 'sensor dentro de uma árvore');
   assert.match(farm, /<text[^>]*>IMA 42 m³\/ha\/ano <tspan>▲<\/tspan><\/text>/);
-  assert.match(farm, /<text[^>]*>Dados que geram resultado<\/text>/, 'lema da Treevia');
+  const tagText = farm.match(/<g class="sd-lens-tag">[\s\S]*?(<text[\s\S]*?<\/text>)/)[1].replace(/<[^>]+>/g, '');
+  assert.equal(tagText, 'Dados que geram resultado', 'lema da Treevia');
   assert.doesNotMatch(svg, /sd-farmer|sd-badge|sd-wave/, 'sem o gestor e o selo antigos');
   // desenhada por último no sd-world (por cima do computador, para o destaque final); feixe só na cópia da frente do satélite
   assert.ok(svg.indexOf('class="sd-farm"') > svg.indexOf('class="sd-flash"'), 'lupa depois do computador');
@@ -594,8 +601,7 @@ test('tela vazia: sem animação (movimento reduzido) não há fundo escuro nem 
 });
 
 test('tela vazia: sensores são o dendrômetro da Treevia, presos no tronco perto do chão (DAP, ~1,30 m)', () => {
-  const trees = [...farmMarkup().matchAll(/<g class="sd-lens-tree" style="transform-origin:([\d.]+)px ([\d.]+)px[^"]*">([\s\S]*?)<\/g><\/g>/g)]
-    .map(m => ({ x: +m[1], ground: +m[2], body: m[3] }));
+  const trees = lensTrees();
   const withSensor = trees.filter(t => t.body.includes('sd-lens-sensor'));
   assert.equal(withSensor.length, 2);
   for (const t of withSensor) {
@@ -640,4 +646,40 @@ test('tela vazia: gráficos coerentes com R² (LOO) 0,96 (pontos colados à reta
   // média baixa (modelo antigo, R² 0,34: ~4); um ponto mais afastado é aceito, como num ajuste real
   const meanRes = res.reduce((a, b) => a + b, 0) / res.length;
   assert.ok(meanRes < 2.5 && Math.max(...res) < 10, `resíduos pequenos (média ${meanRes.toFixed(2)}, máx ${Math.max(...res).toFixed(2)})`);
+});
+
+test('tela vazia: letras do lema animadas (acendem uma a uma e recebem ondas de brilho), sem escala', () => {
+  const tag = farmMarkup().match(/<g class="sd-lens-tag">[\s\S]*?<\/text>/)[0];
+  const letters = [...tag.matchAll(/<tspan class="sd-tag-letter" style="animation-delay:([\d.]+)s">(.)<\/tspan>/g)];
+  assert.equal(letters.map(m => m[2]).join(''), 'Dadosquegeramresultado', 'uma letra por elemento (espaços fora)');
+  const delays = letters.map(m => +m[1]);
+  assert.ok(delays.every((d, i) => i === 0 || d > delays[i - 1]), 'acendem da esquerda para a direita');
+  const kf = css.match(/@keyframes sd-tag-letter \{[^\n]*\}/)[0];
+  assert.doesNotMatch(kf, /transform|scale/, 'só cor e opacidade: texto nítido');
+  assert.ok((kf.match(/fill: #c0f01a/g) || []).length >= 3, 'acende em limão e recebe ondas de brilho');
+  assert.match(kf, /100% \{ opacity: 1; fill: #ffffff; \}/, 'termina em branco');
+  // as ondas terminam antes de a lupa sumir (atraso da última letra incluído)
+  const T = T15(), last = Math.max(...delays);
+  const lastWave = Math.max(...[...kf.matchAll(/([\d.]+)% \{ opacity: 1; fill: #c0f01a; \}/g)].map(m => +m[1])) / 100 * T + last;
+  const farmOut = frames('sd-farm').filter(([, b]) => /opacity: 1/.test(b)).at(-1)[0] / 100 * T;
+  assert.ok(lastWave < farmOut, `última onda (${lastWave.toFixed(2)} s) antes de a lupa sumir (${farmOut.toFixed(2)} s)`);
+});
+
+test('tela vazia: vento leve nas copas (troncos e dendrômetros parados) e linhas de vento no céu da lupa', () => {
+  const trees = lensTrees();
+  for (const t of trees) {
+    const sway = t.body.match(/<g class="sd-lens-sway" style="transform-origin:([\d.]+)px ([\d.]+)px;animation-delay:([\d.]+)s">([\s\S]*?)<\/g><\/g>/);
+    assert.ok(sway, `copas da árvore ${t.x} num grupo que balança`);
+    assert.ok(Math.abs(+sway[1] - t.x) < 0.01, 'balança preso no tronco');
+    assert.ok(sway[4].includes('sd-lens-crown') && sway[4].includes('sd-lens-color'), 'copas e cores juntas');
+    assert.doesNotMatch(sway[4], /sd-lens-trunk|sd-lens-sensor/, 'tronco e dendrômetro não balançam');
+  }
+  // a rajada atravessa o talhão: atraso cresce com x
+  const delays = trees.map(t => +t.body.match(/class="sd-lens-sway"[^>]*animation-delay:([\d.]+)s/)[1]);
+  assert.ok(delays.every((d, i) => i === 0 || d >= delays[i - 1]));
+  const angles = [...css.match(/@keyframes sd-wind \{[^\n]*\}/)[0].matchAll(/rotate\((-?[\d.]+)deg\)/g)].map(m => Math.abs(+m[1]));
+  assert.ok(Math.max(...angles) <= 4, 'vento leve (inclinação pequena)');
+  assert.match(css, /\.sd-lens-sway \{ animation: sd-wind [\d.]+s ease-in-out infinite; \}/, 'loop próprio');
+  const lens = farmMarkup().match(/<g clip-path="url\(#sd-lens-clip\)">[\s\S]*?<rect class="sd-lens-scan"/)[0];
+  assert.ok((lens.match(/class="sd-wind-line"/g) || []).length >= 2, 'linhas de vento dentro da lupa');
 });

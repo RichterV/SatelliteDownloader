@@ -322,6 +322,11 @@ input:disabled { opacity: .5; }
 .sd-spot-dim { fill: #0b1611; opacity: 0; animation: sd-spot-dim var(--sd-t) ease-out infinite; }
 .sd-spot { transform-origin: 140px 199px; animation: sd-spot var(--sd-t) ease-in-out infinite; }
 .sd-spot-fade { animation: sd-spot-fade var(--sd-t) linear infinite; }
+/* letras do lema: acendem uma a uma em limão e assentam em branco; ondas de brilho no destaque (só cor/opacidade: nítido) */
+.sd-tag-letter { animation: sd-tag-letter var(--sd-t) linear infinite; }
+/* vento leve: copas balançam presas no topo do tronco (loop próprio); linhas de vento cruzam o céu da lupa */
+.sd-lens-sway { animation: sd-wind 3.2s ease-in-out infinite; }
+.sd-wind-line { fill: none; stroke: #ffffff; stroke-width: .5; stroke-linecap: round; opacity: 0; animation: sd-wind-line 3.2s linear infinite; }
 /* lupa sobre a fazenda: abre pelo raio do círculo (sem escala, para os textos ficarem nítidos) */
 .sd-lens-r, .sd-lens-frame { r: 40px; animation: sd-lens-open var(--sd-t) ease-out infinite; }
 .sd-lens-frame { fill: none; stroke: var(--ink); stroke-width: 1.6; }
@@ -564,6 +569,9 @@ input:disabled { opacity: .5; }
 @keyframes sd-spot-dim { 0%, 79.11% { opacity: 0; } 81.582%, 100% { opacity: .62; } }
 @keyframes sd-spot { 0%, 79.11% { transform: none; } 82.509%, 100% { transform: translate(60px, -77px) scale(1.95); } }
 @keyframes sd-spot-fade { 0%, 79.11% { opacity: 1; } 80.346%, 100% { opacity: 0; } }
+@keyframes sd-tag-letter { 0%, 73.424% { opacity: 0; fill: #c0f01a; } 74.289% { opacity: 1; fill: #c0f01a; } 76.638%, 84.054% { opacity: 1; fill: #ffffff; } 84.92% { opacity: 1; fill: #c0f01a; } 85.909%, 91.471% { opacity: 1; fill: #ffffff; } 92.336% { opacity: 1; fill: #c0f01a; } 93.325%, 100% { opacity: 1; fill: #ffffff; } }
+@keyframes sd-wind { 0%, 100% { transform: rotate(0deg); } 22% { transform: rotate(2.6deg); } 46% { transform: rotate(-1deg); } 70% { transform: rotate(1.7deg); } 86% { transform: rotate(-.4deg); } }
+@keyframes sd-wind-line { 0% { transform: translateX(0); opacity: 0; } 15% { opacity: .75; } 70% { opacity: .55; } 100% { transform: translateX(70px); opacity: 0; } }
 @keyframes sd-lens-open { 0%, 65.509% { r: 0px; } 67.122% { r: 42.5px; } 67.863%, 100% { r: 40px; } }
 @keyframes sd-lens-cone { 0%, 65.639% { opacity: 0; } 67.057%, 100% { opacity: 1; } }
 @keyframes sd-lens-tree { 0%, 67.057% { transform: scaleY(.05); } 68.637% { transform: scaleY(1.06); } 69.036%, 100% { transform: scaleY(1); } }
