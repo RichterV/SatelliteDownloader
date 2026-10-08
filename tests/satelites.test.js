@@ -1,10 +1,10 @@
-// Testes específicos de cada satélite secundário (Landsat 4/5/7, HLS, Sentinel-1, PALSAR, DEM, MODIS)
+// Testes específicos de cada satélite secundário (Landsat 4/5/7, HLS, Sentinel-1, PALSAR, DEM, SRTM, MODIS)
 // e da assinatura de URLs do Planetary Computer. Sem rede: busca e COGs são simulados.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { Core, GeoTIFFLib, FIX, registerCog, mockFetch } = require('./helpers/core');
+const { Core, GeoTIFFLib, FIX, registerCog, memCogs, mockFetch } = require('./helpers/core');
 
 const geo = Core.parseGeoJSON(JSON.parse(fs.readFileSync(path.join(FIX, 'talhoes.geojson'), 'utf8')));
 const SPLIT_LON = -52.585; // entre o talhão A (oeste) e o B (leste)
@@ -201,6 +201,118 @@ test('DEM: todos os tiles num candidato e altitude float32 mosaicada', async () 
   const d = img.bands[0].data;
   assert.ok(d.includes(312.5) && d.includes(0), 'altitude 0 (válida) não vira sem dado');
   assert.ok(!d.includes(-9999));
+});
+
+// ======================= SRTM (NASADEM) =======================
+test('SRTM: busca na coleção nasadem sem filtro de data', async () => {
+  const f = mockFetch(() => ({ json: { features: [], links: [] } }));
+  try {
+    await Core.stacSearch('srtm', geo.bboxLL, '2025-01-01', '2025-12-31');
+    assert.deepEqual(f.calls[0].body.collections, ['nasadem']);
+    assert.equal(f.calls[0].body.datetime, undefined);
+  } finally { f.restore(); }
+});
+
+test('SRTM: tiles de 1° num candidato, int16 em metros; vazio (-32768) sobre o talhão => sem dado', async () => {
+  const step = 1 / 3600, ext = extentFor(4326, 0.02, step);
+  raster('mem://srtm/w', { crs: 4326, res: step, ext: { ...ext, x1: SPLIT_LON }, Arr: Int16Array, nodata: -32768, fn: () => 587 });
+  raster('mem://srtm/e', { crs: 4326, res: step, ext: { ...ext, x0: SPLIT_LON }, Arr: Int16Array, nodata: -32768, fn: () => 0 });
+  const srtmItem = t => ({ ...item('NASADEM_HGT_' + t, 'nasadem', { elevation: 'mem://srtm/' + t }, { datetime: '2000-02-20T00:00:00Z' }), geometry: tileFp(-53, -52, -22, -21) });
+  const c = Core.orderCandidates(['w', 'e'].map(srtmItem), 'srtm', '2025-08-01', geo);
+  assert.equal(c.length, 1);
+  assert.equal(c[0].items.length, 2);
+  assert.equal(c[0].satellite, 'SRTM');
+  const chk = await Core.checkCandidate(c[0], 'srtm', geo);
+  assert.deepEqual([chk.cloudPct, chk.nodataPct], [0, 0]);
+  const img = await Core.loadImage(c[0], 'srtm', geo, 100);
+  assert.equal(img.dtype, 'int16');
+  assert.equal(img.epsg, 4326);
+  assert.deepEqual(img.bands.map(b => [b.name, b.code, b.unit]), [['elevation', 'SRTM', 'm']]);
+  const d = img.bands[0].data;
+  assert.ok(d instanceof Int16Array);
+  assert.ok(d.includes(587) && d.includes(0), 'altitude 0 (válida) não vira sem dado');
+  assert.ok(!d.includes(-32768));
+
+  // vazio do SRTM (sombra de radar em relevo forte) dentro do talhão B: cena reprovada por falta de dado
+  raster('mem://srtm/void', { crs: 4326, res: step, ext, Arr: Int16Array, nodata: -32768, fn: x => x > SPLIT_LON ? -32768 : 587 });
+  const cv = Core.orderCandidates([{ ...item('NASADEM_HGT_void', 'nasadem', { elevation: 'mem://srtm/void' }, { datetime: '2000-02-20T00:00:00Z' }), geometry: tileFp(-53, -52, -22, -21) }], 'srtm', '2025-08-01', geo);
+  assert.ok((await Core.checkCandidate(cv[0], 'srtm', geo)).nodataPct > 0);
+});
+
+test('SRTM: classificação (-32768 e fora da cena = sem dado; altitude negativa, 0 e alta são válidas; nunca nuvem)', () => {
+  const k = Core.SENSORS.srtm.classify;
+  assert.equal(k(-32768), 'nodata');
+  assert.equal(k(NaN), 'nodata');
+  for (const v of [-430, -1, 0, 587, 8848, 32767]) assert.equal(k(v), 'clear', String(v));
+});
+
+test('SRTM: produto sem data, sem nuvem, em mosaico; nome do arquivo com "SRTM"', () => {
+  const s = Core.SENSORS.srtm;
+  assert.deepEqual([s.static, s.cloudFree, s.mosaic, s.group], [true, true, true, 'secondary']);
+  assert.equal(s.short, 'SRTM');
+  assert.ok(Object.keys(Core.SENSORS).indexOf('srtm') === Object.keys(Core.SENSORS).indexOf('dem') + 1, 'logo depois do Copernicus DEM em "Outros"');
+});
+
+test('SRTM: data mostrada é o período real do voo, não a data nominal do STAC', () => {
+  const c = Core.orderCandidates([{ ...item('NASADEM_HGT_s22w053', 'nasadem', { elevation: 'mem://x' }, { datetime: '2000-02-20T00:00:00Z' }), geometry: tileFp(-53, -52, -22, -21) }], 'srtm', '2025-08-01', geo)[0];
+  assert.equal(c.day, '2000-02-20', 'data nominal (nome do arquivo)');
+  assert.equal(Core.sceneDate('srtm', c), '11 a 22/02/2000');
+  assert.equal(Core.sceneDate('dem', { day: '2021-04-22' }), '2011 a 2015', 'Copernicus DEM: TanDEM-X, não a publicação');
+});
+
+test('SRTM: tile repetido na paginação vira um só', () => {
+  const it = { ...item('NASADEM_HGT_s22w053', 'nasadem', { elevation: 'mem://x' }, { datetime: '2000-02-20T00:00:00Z' }), geometry: tileFp(-53, -52, -22, -21) };
+  const c = Core.orderCandidates([it, { ...it }], 'srtm', '2025-08-01', geo);
+  assert.equal(c.length, 1);
+  assert.equal(c[0].items.length, 1);
+  assert.equal(c[0].covers, true);
+});
+
+test('SRTM: vazio num tile é preenchido pelo tile vizinho na faixa de sobreposição', async () => {
+  const step = 1 / 3600, ext = extentFor(4326, 0.02, step), ov = 20 * step;
+  // tile oeste vai até SPLIT + ov, com vazio na faixa [SPLIT - ov, SPLIT + ov); tile leste começa em SPLIT - ov
+  raster('mem://srtm-ov/w', { crs: 4326, res: step, ext: { ...ext, x1: SPLIT_LON + ov }, Arr: Int16Array, nodata: -32768, fn: x => x >= SPLIT_LON - ov ? -32768 : 587 });
+  raster('mem://srtm-ov/e', { crs: 4326, res: step, ext: { ...ext, x0: SPLIT_LON - ov }, Arr: Int16Array, nodata: -32768, fn: () => 400 });
+  const its = ['w', 'e'].map(t => ({ ...item('NASADEM_HGT_ov_' + t, 'nasadem', { elevation: 'mem://srtm-ov/' + t }, { datetime: '2000-02-20T00:00:00Z' }), geometry: tileFp(-53, -52, -22, -21) }));
+  const c = Core.orderCandidates(its, 'srtm', '2025-08-01', geo);
+  assert.equal((await Core.checkCandidate(c[0], 'srtm', geo)).nodataPct, 0);
+  const img = await Core.loadImage(c[0], 'srtm', geo, 100), d = img.bands[0].data;
+  assert.ok(!d.includes(-32768), 'nenhum vazio sobra');
+  assert.ok(d.includes(587) && d.includes(400));
+});
+
+test('SRTM: arquivo com RasterPixelIsPoint (como o NASADEM) fica alinhado meio pixel deslocado', async () => {
+  const step = 1 / 3600, ext = extentFor(4326, 0.02, step);
+  raster('mem://srtm-pt/t', { crs: 4326, res: step, ext, Arr: Int16Array, nodata: -32768, fn: () => 500 });
+  // troca GTRasterTypeGeoKey (1025) de PixelIsArea (1) para PixelIsPoint (2) no .tif sintético
+  const u16 = new Uint16Array(memCogs.get('mem://srtm-pt/t'));
+  const k = u16.findIndex((v, i) => v === 1025 && u16[i + 1] === 0 && u16[i + 2] === 1 && u16[i + 3] === 1);
+  assert.ok(k > 0);
+  u16[k + 3] = 2;
+  const im = await (await GeoTIFFLib.fromArrayBuffer(memCogs.get('mem://srtm-pt/t'))).getImage();
+  const g = Core.gridOf(im);
+  assert.ok(Math.abs(g.ox - (ext.x0 - step / 2)) < 1e-9 && Math.abs(g.oy - (ext.y0 + step / 2)) < 1e-9);
+  const its = [{ ...item('NASADEM_HGT_pt', 'nasadem', { elevation: 'mem://srtm-pt/t' }, { datetime: '2000-02-20T00:00:00Z' }), geometry: tileFp(-53, -52, -22, -21) }];
+  const img = await Core.loadImage(Core.orderCandidates(its, 'srtm', '2025-08-01', geo)[0], 'srtm', geo, 100);
+  const frac = v => Math.abs(v - Math.round(v));
+  assert.ok(Math.abs(frac((img.X0 - ext.x0) / step) - 0.5) < 1e-6, 'borda da grade a meio pixel do tiepoint (x)');
+  assert.ok(Math.abs(frac((ext.y0 - img.Y0) / step) - 0.5) < 1e-6, 'borda da grade a meio pixel do tiepoint (y)');
+});
+
+test('SRTM: .tif gerado lido de volta (int16, nodata -32768, altitude negativa, EPSG:4326, nome e unidade)', async () => {
+  const W = 3, H = 2, data = Int16Array.from([-430, 0, 587, 8848, -32768, 12]);
+  const s = Core.SENSORS.srtm, b = s.bands[0];
+  const buf = Core.buildGeoTIFF({ W, H, X0: -53, Y0: -21, res: 1 / 3600, epsg: 4326, dtype: s.dtype, nodata: s.nodata,
+    bands: [{ ...b, ...s.scaleFor(null, b), data }] }, { SENSOR: s.label });
+  const im = await (await GeoTIFFLib.fromArrayBuffer(buf)).getImage();
+  assert.equal(im.getGeoKeys().GeographicTypeGeoKey, 4326);
+  assert.equal(im.getGDALNoData(), -32768);
+  assert.equal(im.getSampleFormat(), 2, 'inteiro com sinal');
+  const r = (await im.readRasters())[0];
+  assert.ok(r instanceof Int16Array);
+  assert.deepEqual(Array.from(r), Array.from(data));
+  assert.deepEqual([im.getGDALMetadata(0).DESCRIPTION, im.getGDALMetadata(0).BAND_CODE, im.getGDALMetadata(0).PHYSICAL_UNIT], ['elevation', 'SRTM', 'm']);
+  assert.equal(im.getGDALMetadata().SENSOR, 'SRTM (NASADEM)');
 });
 
 test('gridOf: RasterPixelIsPoint (DEM, Landsat) desloca meio pixel', () => {

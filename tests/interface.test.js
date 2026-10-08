@@ -275,3 +275,118 @@ test('tela vazia: zoom leve (mapa só com o zoom completo), feixe sobre a Améri
   assert.ok((svg.match(/class="sd-felled"/g) || []).length >= 2, 'árvores derrubadas inteiras no solo');
   assert.doesNotMatch(svg, /<path class="sd-mature" d="M292 131/, 'talhão em colheita sem textura cortando copas');
 });
+
+test('app.js: valores dinâmicos em atributos title="..." passam por Core.escHtml', () => {
+  const titles = [...app.matchAll(/title="\$\{([^}]*)/g)].map(m => m[1]);
+  assert.ok(titles.length >= 2);
+  for (const t of titles) assert.match(t, /^Core\.escHtml\(/, t);
+});
+
+test('app.js: data inicial no fuso local (Core.localDay) e busca de cenas via Core.pickCandidate', () => {
+  assert.match(app, /\$\('date'\)\.value = Core\.localDay\(new Date\(\)\)/);
+  assert.match(app, /Core\.pickCandidate\(/);
+});
+
+test('campo de arquivo aceita KML/KMZ e a dica cita o formato', () => {
+  const accept = html.match(/id="file"[^>]*accept="([^"]+)"/)?.[1] || '';
+  for (const e of ['.geojson', '.kml', '.kmz', '.zip', '.shp']) assert.ok(accept.split(',').includes(e), e);
+  assert.match(html.match(/id="fileInfo">([^<]*)</)?.[1] || '', /KML\/KMZ/);
+});
+
+test('app.js: "Data" aparece também para produtos sem data (SRTM, DEM), pelo período; só a diferença some', () => {
+  assert.match(app, /\['Data', Core\.sceneDate\(sensor, c\)\], \.\.\.\(s\.static \? \[\] : \[\['Diferença'/);
+  assert.doesNotMatch(app, /s\.static \? \[\] : \[\['Data'/);
+  assert.match(app, /<td>\$\{Core\.sceneDate\(state\.params\.sensor, c\)\}<\/td>/, 'tabela de cenas');
+  assert.match(app, /ACQUISITION: Core\.sceneDate\(p\.sensor, c\)/, 'metadado no .tif');
+});
+
+// ======================= tela vazia: cena de cálculos (alternativa ao mapa) =======================
+const svgAnim = () => html.match(/<svg class="sd-anim"[\s\S]*?<\/svg>/)[0];
+const calcMarkup = () => svgAnim().match(/<g class="sd-calc" [\s\S]*?\n {10}<\/g>/)[0];
+// porcentagem em que uma keyframe chega ao estado final ("NN%, 100% {")
+const settle = name => {
+  const m = css.match(new RegExp(String.raw`@keyframes ${name} \{[^\n]*?([\d.]+)%, 100% \{`));
+  assert.ok(m, `keyframe ${name} com estado final`);
+  return +m[1];
+};
+
+test('tela vazia: duas cenas no zoom (cálculos e mapa); cálculos é a padrão e a outra sai do desenho', () => {
+  const svg = svgAnim();
+  assert.match(svg, /<svg class="sd-anim" data-scene="calc"/, 'cena padrão: cálculos');
+  assert.match(svg, /<g class="sd-map" clip-path="url\(#sd-screen-clip\)">/, 'mapa mantido');
+  assert.match(svg, /<g class="sd-calc" clip-path="url\(#sd-screen-clip\)">/, 'cálculos recortados na tela');
+  assert.match(svg, /<g class="sd-up"><g class="sd-up-map">[\s\S]*?<g class="sd-up-calc">/, 'cartão de volta nas duas versões');
+  assert.equal((html.match(/<svg[\s>]/g) || []).length, 2, 'sem <svg> aninhado (o teste e a revisão de quadros extraem até o primeiro </svg>)');
+  const hide = css.match(/([^{}]*)\{ display: none; \}/g).join('\n');
+  for (const sel of ['.sd-anim[data-scene="calc"] .sd-map', '.sd-anim[data-scene="calc"] .sd-up-map',
+    '.sd-anim:not([data-scene="calc"]) .sd-calc', '.sd-anim:not([data-scene="calc"]) .sd-up-calc'])
+    assert.ok(hide.includes(sel), sel);
+});
+
+test('tela vazia: cálculos usam a mesma janela do mapa (ocultos durante o zoom)', () => {
+  assert.match(css, /\.sd-calc \{[^}]*animation: sd-map var\(--sd-t\) linear infinite/);
+});
+
+test('tela vazia: tudo da cena de cálculos termina de entrar antes de a tela começar a sumir', () => {
+  const T = 13, fade = +css.match(/@keyframes sd-map \{[^\n]*?52\.3%, ([\d.]+)% \{ opacity: 1/)[1];
+  const calc = calcMarkup();
+  const kfOf = { 'sd-calc-pop': 'sd-calc-pop', 'sd-calc-dot': 'sd-calc-dot', 'sd-calc-odo': 'sd-calc-odo', 'sd-calc-line sd-calc-diag': 'sd-calc-draw',
+    'sd-calc-line sd-calc-trend': 'sd-calc-trend', 'sd-calc-band': 'sd-calc-fade', 'sd-calc-cover': 'sd-calc-type' };
+  let n = 0;
+  for (const m of calc.matchAll(/class="([^"]+)"(?: [^>]*?)?(?: style="([^"]*)")?/g)) {
+    const kf = kfOf[m[1]];
+    if (!kf) continue;
+    n++;
+    const delay = +((m[2] || '').match(/animation-delay:([\d.]+)s/) || [0, 0])[1];
+    const end = settle(kf) + delay / T * 100;
+    assert.ok(end < fade, `${m[1]} (atraso ${delay}s) termina em ${end.toFixed(1)}% >= ${fade}%`);
+  }
+  assert.ok(n >= 70, `elementos animados conferidos (${n})`);
+});
+
+test('tela vazia: sem animação (movimento reduzido) a tela de cálculos fica completa', () => {
+  // estado base = estado final das keyframes
+  const base = cls => css.match(new RegExp(String.raw`\.${cls} \{[^}]*?transform: ([^;]+);`))[1];
+  const fin = kf => css.match(new RegExp(String.raw`@keyframes ${kf} \{[^\n]*?, 100% \{ transform: ([^;]+);`))[1];
+  assert.equal(base('sd-calc-cover'), fin('sd-calc-type'), 'equação toda visível');
+  assert.equal(base('sd-calc-odo'), fin('sd-calc-odo'), 'odômetro no valor final');
+  for (const cls of ['sd-calc-pop', 'sd-calc-dot', 'sd-calc-band'])
+    assert.doesNotMatch(css.match(new RegExp(String.raw`\.${cls} \{[^}]*\}`))[0], /transform: scale\(0\)|opacity: 0/, cls);
+});
+
+test('tela vazia: números rolam até os valores da plataforma (8.143, 2.891, 0.336)', () => {
+  const step = +css.match(/@keyframes sd-calc-odo \{[^\n]*translateY\(-([\d.]+)px\)/)[1];
+  const odos = [...calcMarkup().matchAll(/<g clip-path="url\(#(sd-odo-clip-\d)\)"><g class="sd-calc-odo"[^>]*>(.*?)<\/g><\/g>/g)];
+  assert.equal(odos.length, 3);
+  const finals = odos.map(([, clip, body]) => {
+    const lines = [...body.matchAll(/<text x="[\d.]+" y="([\d.]+)">([^<]+)<\/text>/g)].map(t => [+t[1], t[2]]);
+    const win = html.match(new RegExp(String.raw`<clipPath id="${clip}"><rect x="[\d.]+" y="([\d.]+)" width="[\d.]+" height="([\d.]+)"/>`));
+    const [y0, h] = [+win[1], +win[2]];
+    // a linha que fica dentro da janela depois de subir `step`
+    const shown = lines.filter(([y]) => y - step > y0 && y - step < y0 + h);
+    assert.equal(shown.length, 1, clip);
+    return shown[0][1];
+  });
+  assert.deepEqual(finals, ['8.143', '2.891', '0.336']);
+});
+
+test('tela vazia: pontos dos gráficos dentro das áreas de plotagem e linhas crescendo a partir do início', () => {
+  const calc = calcMarkup();
+  const plots = [...calc.matchAll(/<rect class="sd-calc-plot" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)].map(m => m.slice(1).map(Number));
+  assert.equal(plots.length, 2);
+  const dots = [...calc.matchAll(/<circle class="sd-calc-dot" cx="([\d.]+)" cy="([\d.]+)"/g)].map(m => [+m[1], +m[2]]);
+  assert.ok(dots.length >= 40);
+  for (const [x, y] of dots) assert.ok(plots.some(([px, py, w, h]) => x > px && x < px + w && y > py && y < py + h), `ponto ${x},${y}`);
+  for (const m of calc.matchAll(/class="sd-calc-line [^"]+" style="transform-origin:([\d.]+)px ([\d.]+)px[^"]*" d="M([\d.]+) ([\d.]+)/g))
+    assert.deepEqual([+m[1], +m[2]], [+m[3], +m[4]], 'origem da escala no primeiro ponto da linha');
+});
+
+test('Core.animScene: ?anim=calc ou ?anim=mapa (sem diferenciar maiúsculas); outro valor mantém a do HTML', () => {
+  const { Core } = require('./helpers/core');
+  assert.equal(Core.animScene('?anim=mapa'), 'mapa');
+  assert.equal(Core.animScene('?x=1&anim=CALC'), 'calc');
+  assert.equal(Core.animScene('?anim=outra'), null);
+  assert.equal(Core.animScene(''), null);
+  assert.match(app, /Core\.animScene\(location\.search\)/);
+  assert.match(app, /svg\.dataset\.scene = animScene/);
+});

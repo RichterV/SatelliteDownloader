@@ -321,6 +321,54 @@ input:disabled { opacity: .5; }
 .sd-up-plot2 { fill: #3e9b63; stroke: #e0a800; stroke-width: 1; }
 .sd-up-river { fill: none; stroke: #4aa3df; stroke-width: 2; stroke-linecap: round; }
 
+/* cena da tela no zoom: data-scene="calc" (cálculos de inventário) ou "mapa" (mapa florestal, padrão sem o atributo).
+   A outra cena sai do desenho (display: none), então não custa nada. */
+.sd-anim[data-scene="calc"] .sd-map, .sd-anim[data-scene="calc"] .sd-up-map,
+.sd-anim:not([data-scene="calc"]) .sd-calc, .sd-anim:not([data-scene="calc"]) .sd-up-calc { display: none; }
+.sd-up-calc-card { fill: #fff; stroke: var(--ink); stroke-width: 2; }
+.sd-up-calc-axis { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-linecap: round; }
+.sd-up-calc-diag { fill: none; stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 1.5; }
+.sd-up-calc-dot { fill: #2f7d4f; stroke: var(--ink); stroke-width: .6; }
+
+/* cálculos (estado sem animação = tela completa, usado em prefers-reduced-motion).
+   Mesma janela de visibilidade do mapa (sd-map): só aparece com o zoom completo. Tudo entra entre 52% e ~68%. */
+.sd-calc { opacity: 1; animation: sd-map var(--sd-t) linear infinite; }
+.sd-calc-pop { animation: sd-calc-pop var(--sd-t) ease-out infinite; }
+.sd-calc-title { font: 700 3px system-ui, sans-serif; fill: #1f3b63; text-anchor: middle; }
+.sd-calc-gear { animation: sd-spin 1.6s linear infinite; }
+.sd-calc-gear circle, .sd-calc-gear path { fill: none; stroke: #8dc63f; stroke-width: .6; stroke-linecap: round; }
+.sd-calc-gear .sd-calc-gear-hole { fill: #8dc63f; stroke: none; }
+.sd-calc-eq { font: italic 2.15px Georgia, "Times New Roman", serif; fill: var(--ink); }
+.sd-calc-eq-v { font-weight: 700; }
+.sd-calc-eq-b { font-style: normal; font-weight: 600; fill: #2f7d4f; }
+/* equação "digitada": a cobertura (cor do fundo) desliza para a direita levando o cursor */
+.sd-calc-cover { transform: translateX(90px); animation: sd-calc-type var(--sd-t) steps(30) infinite; }
+.sd-calc-cursor { fill: #1f3b63; animation: sd-blink-cursor .5s steps(1) infinite; }
+.sd-calc-pill { fill: #e6ebe8; stroke: #cfd8d2; stroke-width: .25; }
+.sd-calc-pill-t { font: 500 1.55px system-ui, sans-serif; fill: var(--ink); text-anchor: middle; }
+.sd-calc-copy { fill: #8dc63f; }
+.sd-calc-copy-t { font: 700 1.6px system-ui, sans-serif; fill: #fff; text-anchor: middle; }
+.sd-calc-card { fill: #fff; stroke: #dbe2dd; stroke-width: .3; }
+.sd-calc-shadow { fill: rgba(31, 59, 99, .12); }
+/* números rolando como odômetro até o valor final */
+.sd-calc-odo { transform: translateY(-26px); animation: sd-calc-odo var(--sd-t) cubic-bezier(.2, .7, .3, 1) infinite; }
+.sd-calc-odo text { font: 700 3.9px system-ui, sans-serif; fill: #1f3b63; text-anchor: middle; }
+.sd-calc-kpi-l { font: 1.7px system-ui, sans-serif; fill: #5b6b62; text-anchor: middle; }
+.sd-calc-chart-t { font: 700 1.9px system-ui, sans-serif; fill: var(--ink); }
+.sd-calc-plot { fill: #fff; stroke: var(--ink); stroke-width: .3; }
+.sd-calc-tick { stroke: var(--ink); stroke-width: .25; }
+.sd-calc-axis { font: 600 1.5px system-ui, sans-serif; fill: var(--ink); text-anchor: middle; }
+.sd-calc-stat { font: 1.35px system-ui, sans-serif; fill: var(--ink); }
+/* linhas "desenhadas" crescendo a partir do primeiro ponto (escala; o tracejado não estica) */
+.sd-calc-line { fill: none; stroke-linecap: round; }
+.sd-calc-diag { stroke: var(--ink); stroke-width: .4; stroke-dasharray: 1.2 .8; animation: sd-calc-draw var(--sd-t) ease-out infinite; }
+.sd-calc-trend { stroke: #6cc48c; stroke-width: .6; animation: sd-calc-trend var(--sd-t) ease-out infinite; }
+.sd-calc-dot { fill: #2f7d4f; stroke: #1d4d31; stroke-width: .2; animation: sd-calc-dot var(--sd-t) ease-out infinite; }
+.sd-calc-band { fill: #cfe9d6; animation: sd-calc-fade var(--sd-t) linear infinite; }
+.sd-calc-zero { fill: none; stroke: var(--ink); stroke-width: .4; stroke-dasharray: 1.2 .8; }
+/* símbolos subindo nas margens da linha do título (loop próprio) */
+.sd-calc-float { font: 700 3px Georgia, "Times New Roman", serif; fill: #1f3b63; text-anchor: middle; opacity: 0; animation: sd-calc-float 2.4s linear infinite; }
+
 @keyframes sd-orbit-back {
   0% { transform: translate(88px, 2px) scale(0.62); opacity: 1; }
   1.11% { transform: translate(82.03px, 4.7px) scale(0.63); opacity: 1; }
@@ -531,6 +579,17 @@ input:disabled { opacity: .5; }
 @keyframes sd-sway { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
 @keyframes sd-grow { 0% { transform: scale(.25); } 55%, 100% { transform: scale(1); } }
 @keyframes sd-ping { 0% { transform: scale(.8); opacity: .9; } 100% { transform: scale(5.5); opacity: 0; } }
+/* cena de cálculos (porcentagens do ciclo de --sd-t; a tela aparece inteira em 52,3% e começa a sumir em 70,6%) */
+@keyframes sd-calc-pop { 0%, 52% { transform: scale(0); } 54% { transform: scale(1.18); } 55%, 100% { transform: scale(1); } }
+@keyframes sd-calc-type { 0%, 52.5% { transform: translateX(0); } 59%, 100% { transform: translateX(90px); } }
+@keyframes sd-calc-odo { 0%, 53.5% { transform: translateY(0); } 60.5%, 100% { transform: translateY(-26px); } }
+@keyframes sd-calc-dot { 0%, 55% { transform: scale(0); } 56.5% { transform: scale(1.6); } 57.3%, 100% { transform: scale(1); } }
+@keyframes sd-calc-draw { 0%, 55% { transform: scale(0); } 58.5%, 100% { transform: scale(1); } }
+@keyframes sd-calc-trend { 0%, 64% { transform: scale(0); } 67%, 100% { transform: scale(1); } }
+@keyframes sd-calc-fade { 0%, 62% { opacity: 0; } 65%, 100% { opacity: 1; } }
+@keyframes sd-calc-float { 0% { transform: translateY(0); opacity: 0; } 25% { opacity: .6; } 100% { transform: translateY(-7px); opacity: 0; } }
+@keyframes sd-spin { to { transform: rotate(360deg); } }
+@keyframes sd-blink-cursor { 0% { opacity: 1; } 50% { opacity: 0; } }
 @keyframes sd-harvest { from { transform: translateY(0); } to { transform: translateY(5.6px); } }
 @keyframes sd-boom { from { transform: rotate(-18deg); } to { transform: rotate(14deg); } }
 @keyframes sd-rotor { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }

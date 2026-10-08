@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+<Document>
+	<name>talhoes</name>
+	<Style id="s"><LineStyle><color>ff00ffff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<Folder>
+		<name>Fazenda</name>
+		<Placemark>
+			<name><![CDATA[Talhão A]]></name>
+			<styleUrl>#s</styleUrl>
+			<Polygon>
+				<tessellate>1</tessellate>
+				<outerBoundaryIs>
+					<LinearRing>
+						<coordinates>
+							-52.6,-21.75,0 -52.59,-21.75,0 -52.59,-21.742,0 -52.6,-21.742,0 -52.6,-21.75,0
+						</coordinates>
+					</LinearRing>
+				</outerBoundaryIs>
+			</Polygon>
+		</Placemark>
+		<Placemark>
+			<name>Talhão B</name>
+			<MultiGeometry>
+				<Polygon>
+					<outerBoundaryIs><LinearRing><coordinates>-52.58,-21.74 -52.57,-21.74 -52.57,-21.732 -52.58,-21.732</coordinates></LinearRing></outerBoundaryIs>
+				</Polygon>
+			</MultiGeometry>
+		</Placemark>
+		<Placemark>
+			<name>Sede</name>
+			<Point><coordinates>-52.585,-21.74,0</coordinates></Point>
+		</Placemark>
+	</Folder>
+</Document>
+</kml>

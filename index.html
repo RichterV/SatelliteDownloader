@@ -37,9 +37,9 @@
     <div class="field">
       <span class="label">Área</span>
       <label class="drop" id="drop">
-        <input type="file" id="file" multiple accept=".geojson,.json,.zip,.shp,.dbf,.prj,.cpg,.shx">
+        <input type="file" id="file" multiple accept=".geojson,.json,.kml,.kmz,.zip,.shp,.dbf,.prj,.cpg,.shx">
         <span class="drop-main" id="dropMain">Arraste ou clique para escolher</span>
-        <span class="drop-sub" id="fileInfo">GeoJSON, shapefile .zip ou .shp + .dbf + .prj</span>
+        <span class="drop-sub" id="fileInfo">GeoJSON, KML/KMZ, shapefile .zip ou .shp + .dbf + .prj</span>
       </label>
     </div>
 
@@ -83,8 +83,9 @@
 
   <section class="content">
     <div class="card empty" id="emptyState">
-      <!-- animação em loop (só CSS): satélite solta dados => computador => zoom no mapa => mapa volta ao satélite -->
-      <svg class="sd-anim" viewBox="0 0 400 260" role="img" aria-label="Satélite enviando dados que viram um mapa no computador">
+      <!-- animação em loop (só CSS): satélite solta dados => computador => zoom na tela => resultado volta ao satélite.
+           data-scene escolhe o que a tela mostra no zoom: "calc" (cálculos de inventário) ou "mapa" (mapa florestal); ?anim=mapa na URL troca -->
+      <svg class="sd-anim" data-scene="calc" viewBox="0 0 400 260" role="img" aria-label="Satélite enviando dados que viram cálculos de inventário no computador">
         <defs>
           <!-- linhas de plantio (eucalipto) -->
           <pattern id="sd-rows" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(-12)">
@@ -96,6 +97,10 @@
           <pattern id="sd-stumps" width="3.3" height="3.3" patternUnits="userSpaceOnUse" patternTransform="rotate(-8)"><circle cx="1.65" cy="1.65" r=".45" fill="#8a6239"/></pattern>
           <pattern id="sd-forest-tex" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="1.4" cy="1.5" r="1.6" fill="#3f8a57" stroke="#24553a" stroke-width=".25"/><circle cx="3.9" cy="3.8" r="1.4" fill="#357a4b" stroke="#24553a" stroke-width=".25"/><circle cx="4.2" cy="1.1" r=".9" fill="#4b9a64"/></pattern>
           <pattern id="sd-beds" width="3.4" height="3.6" patternUnits="userSpaceOnUse"><rect x=".2" y=".2" width="3" height="3.2" rx=".4" fill="#cfe9b8"/></pattern>
+          <!-- janelas dos números rolando (cena de cálculos) -->
+          <clipPath id="sd-odo-clip-0"><rect x="236" y="150.3" width="30" height="5.2"/></clipPath>
+          <clipPath id="sd-odo-clip-1"><rect x="270" y="150.3" width="30" height="5.2"/></clipPath>
+          <clipPath id="sd-odo-clip-2"><rect x="304" y="150.3" width="30" height="5.2"/></clipPath>
           <clipPath id="sd-screen-clip"><rect x="224" y="126" width="122" height="76" rx="4"/></clipPath>
           <linearGradient id="sd-beam-grad" gradientUnits="userSpaceOnUse" x1="105.8" y1="90" x2="184.76" y2="177.69"><stop offset="0" stop-color="#fff3a6" stop-opacity=".85"/><stop offset="1" stop-color="#fff3a6" stop-opacity="0"/></linearGradient>
           <clipPath id="sd-globe-clip"><circle cx="200" cy="130" r="128"/></clipPath>
@@ -289,6 +294,112 @@
             <g class="sd-pin"><path d="M276 147c-4-5-7-7.5-7-10.5a7 7 0 0 1 14 0c0 3-3 5.5-7 10.5z"/><circle cx="276" cy="136.5" r="2.4"/></g>
             <rect class="sd-scan" x="224" y="126" width="3" height="76"/>
           </g>
+          <!-- cálculos na tela (cena alternativa ao mapa, inspirada no processamento de inventário da plataforma) -->
+          <g class="sd-calc" clip-path="url(#sd-screen-clip)">
+            <rect class="sd-ui-bg" x="224" y="126" width="122" height="76"/>
+            <rect class="sd-ui-top" x="224" y="126" width="122" height="5"/>
+            <rect class="sd-ui-txt" x="236" y="127.8" width="7" height="1.3" rx=".65"/><rect class="sd-ui-txt" x="245" y="127.8" width="9" height="1.3" rx=".65"/><rect class="sd-ui-txt" x="256" y="127.8" width="11" height="1.3" rx=".65"/><rect class="sd-ui-pill" x="269" y="127.6" width="5" height="1.7" rx=".85"/><rect class="sd-ui-txt" x="276" y="127.8" width="8" height="1.3" rx=".65"/><circle class="sd-ui-avatar" cx="339" cy="128.5" r="1.6"/>
+            <g class="sd-calc-pop" style="transform-origin:284px 135.6px;animation-delay:0s"><text class="sd-calc-title" x="284" y="136.6">Equação do modelo</text></g>
+            <g class="sd-calc-gear" style="transform-origin:302.5px 135.5px"><circle cx="302.5" cy="135.5" r="1.25"/><path d="M302.5 133.4L302.5 134.2M302.5 136.8L302.5 137.6M300.4 135.5L301.2 135.5M303.8 135.5L304.6 135.5M301 134L301.6 134.6M303.4 136.4L304 137M301 137L301.6 136.4M303.4 134.6L304 134"/><circle class="sd-calc-gear-hole" cx="302.5" cy="135.5" r=".45"/></g>
+            <text class="sd-calc-float" x="238" y="138" style="transform-origin:238px 138px;animation-delay:0s">Σ</text>
+            <text class="sd-calc-float" x="250" y="138" style="transform-origin:250px 138px;animation-delay:0.6s">β</text>
+            <text class="sd-calc-float" x="321" y="138" style="transform-origin:321px 138px;animation-delay:1.2s">√x</text>
+            <text class="sd-calc-float" x="334" y="138" style="transform-origin:334px 138px;animation-delay:1.8s">R²</text>
+            <text class="sd-calc-eq" x="235" y="141.7"><tspan class="sd-calc-eq-v">IMA</tspan> = −175.2 + 10.49·<tspan class="sd-calc-eq-b">RED/B12</tspan> + 6.54·<tspan class="sd-calc-eq-b">B06/B05</tspan> + 180.9·<tspan class="sd-calc-eq-b">B08/RED</tspan> − 56.2·<tspan class="sd-calc-eq-b">B09/B05</tspan> …</text>
+            <g class="sd-calc-cover"><rect class="sd-ui-bg" x="234" y="138.6" width="108" height="4.4"/><rect class="sd-calc-cursor" x="234" y="139" width=".45" height="3.4"/></g>
+            <g class="sd-calc-pop" style="transform-origin:239.7px 145.8px;animation-delay:0.35s"><rect class="sd-calc-pill" x="232.5" y="144.3" width="14.4" height="3" rx="1.5"/><text class="sd-calc-pill-t" x="239.7" y="146.35">β₀ = -175.18</text></g>
+            <g class="sd-calc-pop" style="transform-origin:255.3px 145.8px;animation-delay:0.44s"><rect class="sd-calc-pill" x="248.1" y="144.3" width="14.4" height="3" rx="1.5"/><text class="sd-calc-pill-t" x="255.3" y="146.35">β₁ = 10.487</text></g>
+            <g class="sd-calc-pop" style="transform-origin:270.9px 145.8px;animation-delay:0.53s"><rect class="sd-calc-pill" x="263.7" y="144.3" width="14.4" height="3" rx="1.5"/><text class="sd-calc-pill-t" x="270.9" y="146.35">β₂ = 6.541</text></g>
+            <g class="sd-calc-pop" style="transform-origin:286.5px 145.8px;animation-delay:0.62s"><rect class="sd-calc-pill" x="279.3" y="144.3" width="14.4" height="3" rx="1.5"/><text class="sd-calc-pill-t" x="286.5" y="146.35">β₃ = 180.91</text></g>
+            <g class="sd-calc-pop" style="transform-origin:302.1px 145.8px;animation-delay:0.71s"><rect class="sd-calc-pill" x="294.9" y="144.3" width="14.4" height="3" rx="1.5"/><text class="sd-calc-pill-t" x="302.1" y="146.35">β₄ = -56.196</text></g>
+            <g class="sd-calc-pop" style="transform-origin:317.7px 145.8px;animation-delay:0.8s"><rect class="sd-calc-pill" x="310.5" y="144.3" width="14.4" height="3" rx="1.5"/><text class="sd-calc-pill-t" x="317.7" y="146.35">β₅ = 16.162</text></g>
+            <g class="sd-calc-pop" style="transform-origin:332.1px 145.8px;animation-delay:0.95s"><rect class="sd-calc-copy" x="326.6" y="144.3" width="11" height="3" rx="1.5"/><text class="sd-calc-copy-t" x="332.1" y="146.35">Copiar</text></g>
+            <g class="sd-calc-pop" style="transform-origin:251px 154.5px;animation-delay:0.15s"><rect class="sd-calc-shadow" x="236.5" y="150" width="30" height="10" rx="1.2"/><rect class="sd-calc-card" x="236" y="149.5" width="30" height="10" rx="1.2"/><g clip-path="url(#sd-odo-clip-0)"><g class="sd-calc-odo" style="animation-delay:0.15s"><text x="251" y="154.35">0.000</text><text x="251" y="159.55">3.517</text><text x="251" y="164.75">9.902</text><text x="251" y="169.95">6.388</text><text x="251" y="175.15">7.961</text><text x="251" y="180.35">8.143</text></g></g><text class="sd-calc-kpi-l" x="251" y="158.2">Erro (%)</text></g>
+            <g class="sd-calc-pop" style="transform-origin:285px 154.5px;animation-delay:0.27s"><rect class="sd-calc-shadow" x="270.5" y="150" width="30" height="10" rx="1.2"/><rect class="sd-calc-card" x="270" y="149.5" width="30" height="10" rx="1.2"/><g clip-path="url(#sd-odo-clip-1)"><g class="sd-calc-odo" style="animation-delay:0.27s"><text x="285" y="154.35">0.000</text><text x="285" y="159.55">1.204</text><text x="285" y="164.75">4.770</text><text x="285" y="169.95">2.035</text><text x="285" y="175.15">3.118</text><text x="285" y="180.35">2.891</text></g></g><text class="sd-calc-kpi-l" x="285" y="158.2">Erro</text></g>
+            <g class="sd-calc-pop" style="transform-origin:319px 154.5px;animation-delay:0.39s"><rect class="sd-calc-shadow" x="304.5" y="150" width="30" height="10" rx="1.2"/><rect class="sd-calc-card" x="304" y="149.5" width="30" height="10" rx="1.2"/><g clip-path="url(#sd-odo-clip-2)"><g class="sd-calc-odo" style="animation-delay:0.39s"><text x="319" y="154.35">0.000</text><text x="319" y="159.55">0.912</text><text x="319" y="164.75">0.105</text><text x="319" y="169.95">0.547</text><text x="319" y="175.15">0.281</text><text x="319" y="180.35">0.336</text></g></g><text class="sd-calc-kpi-l" x="319" y="158.2">R² (LOO)</text></g>
+            <g class="sd-calc-pop" style="transform-origin:256px 181px;animation-delay:0.2s"><rect class="sd-calc-shadow" x="229" y="162.3" width="55" height="38.4" rx="1.2"/><rect class="sd-calc-card" x="228.5" y="161.8" width="55" height="38.4" rx="1.2"/><text class="sd-calc-chart-t" x="230.5" y="165">Real vs Estimado (LOO)</text></g>
+            <g class="sd-calc-pop" style="transform-origin:314px 181px;animation-delay:0.3s"><rect class="sd-calc-shadow" x="287" y="162.3" width="55" height="38.4" rx="1.2"/><rect class="sd-calc-card" x="286.5" y="161.8" width="55" height="38.4" rx="1.2"/><text class="sd-calc-chart-t" x="288.5" y="165">Resíduos (LOO)</text></g>
+            <rect class="sd-calc-plot" x="236" y="167.5" width="45" height="29.5"/>
+            <path class="sd-calc-tick" d="M244.33 197v.9M261 197v.9M277.67 197v.9M236 191.54h-.9M236 180.61h-.9M236 169.69h-.9"/>
+            <text class="sd-calc-axis" x="258.5" y="199.6">Valor real</text>
+            <path class="sd-calc-line sd-calc-diag" style="transform-origin:236px 197px" d="M236 197L281 167.5"/>
+            <circle class="sd-calc-dot" cx="241" cy="189.8" r=".95" style="transform-origin:241px 189.8px;animation-delay:0.45s"/>
+            <circle class="sd-calc-dot" cx="241.06" cy="189.81" r=".95" style="transform-origin:241.06px 189.81px;animation-delay:0.47s"/>
+            <circle class="sd-calc-dot" cx="241.95" cy="191.35" r=".95" style="transform-origin:241.95px 191.35px;animation-delay:0.49s"/>
+            <circle class="sd-calc-dot" cx="242.36" cy="194.42" r=".95" style="transform-origin:242.36px 194.42px;animation-delay:0.52s"/>
+            <circle class="sd-calc-dot" cx="243.01" cy="189.33" r=".95" style="transform-origin:243.01px 189.33px;animation-delay:0.54s"/>
+            <circle class="sd-calc-dot" cx="243.15" cy="189.58" r=".95" style="transform-origin:243.15px 189.58px;animation-delay:0.56s"/>
+            <circle class="sd-calc-dot" cx="243.85" cy="190.34" r=".95" style="transform-origin:243.85px 190.34px;animation-delay:0.58s"/>
+            <circle class="sd-calc-dot" cx="245.79" cy="185.11" r=".95" style="transform-origin:245.79px 185.11px;animation-delay:0.6s"/>
+            <circle class="sd-calc-dot" cx="246.29" cy="186.15" r=".95" style="transform-origin:246.29px 186.15px;animation-delay:0.63s"/>
+            <circle class="sd-calc-dot" cx="249.44" cy="186.28" r=".95" style="transform-origin:249.44px 186.28px;animation-delay:0.65s"/>
+            <circle class="sd-calc-dot" cx="249.55" cy="184.93" r=".95" style="transform-origin:249.55px 184.93px;animation-delay:0.67s"/>
+            <circle class="sd-calc-dot" cx="249.61" cy="186.06" r=".95" style="transform-origin:249.61px 186.06px;animation-delay:0.69s"/>
+            <circle class="sd-calc-dot" cx="251.91" cy="184.75" r=".95" style="transform-origin:251.91px 184.75px;animation-delay:0.71s"/>
+            <circle class="sd-calc-dot" cx="253.28" cy="184.85" r=".95" style="transform-origin:253.28px 184.85px;animation-delay:0.74s"/>
+            <circle class="sd-calc-dot" cx="253.85" cy="185.48" r=".95" style="transform-origin:253.85px 185.48px;animation-delay:0.76s"/>
+            <circle class="sd-calc-dot" cx="254.72" cy="184.71" r=".95" style="transform-origin:254.72px 184.71px;animation-delay:0.78s"/>
+            <circle class="sd-calc-dot" cx="255.87" cy="186.87" r=".95" style="transform-origin:255.87px 186.87px;animation-delay:0.8s"/>
+            <circle class="sd-calc-dot" cx="259.51" cy="183.3" r=".95" style="transform-origin:259.51px 183.3px;animation-delay:0.82s"/>
+            <circle class="sd-calc-dot" cx="261.44" cy="184.21" r=".95" style="transform-origin:261.44px 184.21px;animation-delay:0.85s"/>
+            <circle class="sd-calc-dot" cx="261.73" cy="186.65" r=".95" style="transform-origin:261.73px 186.65px;animation-delay:0.87s"/>
+            <circle class="sd-calc-dot" cx="264.19" cy="182.77" r=".95" style="transform-origin:264.19px 182.77px;animation-delay:0.89s"/>
+            <circle class="sd-calc-dot" cx="265.18" cy="180.85" r=".95" style="transform-origin:265.18px 180.85px;animation-delay:0.91s"/>
+            <circle class="sd-calc-dot" cx="265.3" cy="181.99" r=".95" style="transform-origin:265.3px 181.99px;animation-delay:0.93s"/>
+            <circle class="sd-calc-dot" cx="265.97" cy="180.52" r=".95" style="transform-origin:265.97px 180.52px;animation-delay:0.96s"/>
+            <circle class="sd-calc-dot" cx="268.58" cy="180.54" r=".95" style="transform-origin:268.58px 180.54px;animation-delay:0.98s"/>
+            <circle class="sd-calc-dot" cx="269.21" cy="182.13" r=".95" style="transform-origin:269.21px 182.13px;animation-delay:1s"/>
+            <circle class="sd-calc-dot" cx="270.6" cy="180.5" r=".95" style="transform-origin:270.6px 180.5px;animation-delay:1.02s"/>
+            <circle class="sd-calc-dot" cx="273.34" cy="183.15" r=".95" style="transform-origin:273.34px 183.15px;animation-delay:1.04s"/>
+            <circle class="sd-calc-dot" cx="273.46" cy="182.71" r=".95" style="transform-origin:273.46px 182.71px;animation-delay:1.07s"/>
+            <circle class="sd-calc-dot" cx="274.44" cy="180.78" r=".95" style="transform-origin:274.44px 180.78px;animation-delay:1.09s"/>
+            <circle class="sd-calc-dot" cx="274.48" cy="179.01" r=".95" style="transform-origin:274.48px 179.01px;animation-delay:1.11s"/>
+            <circle class="sd-calc-dot" cx="275.68" cy="183.04" r=".95" style="transform-origin:275.68px 183.04px;animation-delay:1.13s"/>
+            <circle class="sd-calc-dot" cx="275.99" cy="179.09" r=".95" style="transform-origin:275.99px 179.09px;animation-delay:1.15s"/>
+            <circle class="sd-calc-dot" cx="277.45" cy="180.44" r=".95" style="transform-origin:277.45px 180.44px;animation-delay:1.18s"/>
+            <path class="sd-calc-line sd-calc-trend" style="transform-origin:241px 189.83px" d="M241 189.83L277.67 179.74"/>
+            <g class="sd-calc-pop" style="transform-origin:242px 171px;animation-delay:1.15s"><text class="sd-calc-stat" x="237.2" y="170.1">R² (LOO): 0.34</text><text class="sd-calc-stat" x="237.2" y="172.3">MAPE%: 8.14</text></g>
+            <rect class="sd-calc-plot" x="294" y="167.5" width="45" height="29.5"/>
+            <path class="sd-calc-tick" d="M301.11 197v.9M312.95 197v.9M324.79 197v.9M336.63 197v.9M294 194.64h-.9M294 182.84h-.9M294 171.04h-.9"/>
+            <text class="sd-calc-axis" x="316.5" y="199.6">Valor estimado</text>
+            <path class="sd-calc-band" d="M295.18 174.85L299.33 176.81L303.47 178.32L307.62 179.4L311.76 180.03L315.91 180.23L320.05 179.98L324.2 179.3L328.34 178.17L332.49 176.6L336.63 174.59L336.63 187.93L332.49 186.25L328.34 184.93L324.2 183.95L320.05 183.33L315.91 183.07L311.76 183.16L307.62 183.6L303.47 184.4L299.33 185.55L295.18 187.06Z"/>
+            <path class="sd-calc-zero" d="M294 182.84H339"/>
+            <circle class="sd-calc-dot" cx="296.99" cy="181.21" r=".95" style="transform-origin:296.99px 181.21px;animation-delay:0.55s"/>
+            <circle class="sd-calc-dot" cx="297.53" cy="186.8" r=".95" style="transform-origin:297.53px 186.8px;animation-delay:0.57s"/>
+            <circle class="sd-calc-dot" cx="298.52" cy="183.97" r=".95" style="transform-origin:298.52px 183.97px;animation-delay:0.59s"/>
+            <circle class="sd-calc-dot" cx="299.38" cy="180.34" r=".95" style="transform-origin:299.38px 180.34px;animation-delay:0.62s"/>
+            <circle class="sd-calc-dot" cx="300.29" cy="188.1" r=".95" style="transform-origin:300.29px 188.1px;animation-delay:0.64s"/>
+            <circle class="sd-calc-dot" cx="303.12" cy="179.14" r=".95" style="transform-origin:303.12px 179.14px;animation-delay:0.66s"/>
+            <circle class="sd-calc-dot" cx="303.13" cy="183.94" r=".95" style="transform-origin:303.13px 183.94px;animation-delay:0.68s"/>
+            <circle class="sd-calc-dot" cx="303.8" cy="183.04" r=".95" style="transform-origin:303.8px 183.04px;animation-delay:0.7s"/>
+            <circle class="sd-calc-dot" cx="304.58" cy="186.18" r=".95" style="transform-origin:304.58px 186.18px;animation-delay:0.73s"/>
+            <circle class="sd-calc-dot" cx="306.94" cy="185.2" r=".95" style="transform-origin:306.94px 185.2px;animation-delay:0.75s"/>
+            <circle class="sd-calc-dot" cx="310.21" cy="190.95" r=".95" style="transform-origin:310.21px 190.95px;animation-delay:0.77s"/>
+            <circle class="sd-calc-dot" cx="310.35" cy="179.34" r=".95" style="transform-origin:310.35px 179.34px;animation-delay:0.79s"/>
+            <circle class="sd-calc-dot" cx="312.26" cy="178.97" r=".95" style="transform-origin:312.26px 178.97px;animation-delay:0.81s"/>
+            <circle class="sd-calc-dot" cx="312.53" cy="181.71" r=".95" style="transform-origin:312.53px 181.71px;animation-delay:0.84s"/>
+            <circle class="sd-calc-dot" cx="313.22" cy="189.31" r=".95" style="transform-origin:313.22px 189.31px;animation-delay:0.86s"/>
+            <circle class="sd-calc-dot" cx="314.31" cy="180.46" r=".95" style="transform-origin:314.31px 180.46px;animation-delay:0.88s"/>
+            <circle class="sd-calc-dot" cx="314.62" cy="187.21" r=".95" style="transform-origin:314.62px 187.21px;animation-delay:0.9s"/>
+            <circle class="sd-calc-dot" cx="315.15" cy="188.75" r=".95" style="transform-origin:315.15px 188.75px;animation-delay:0.92s"/>
+            <circle class="sd-calc-dot" cx="315.79" cy="178.82" r=".95" style="transform-origin:315.79px 178.82px;animation-delay:0.95s"/>
+            <circle class="sd-calc-dot" cx="316.33" cy="175.9" r=".95" style="transform-origin:316.33px 175.9px;animation-delay:0.97s"/>
+            <circle class="sd-calc-dot" cx="320.6" cy="181.2" r=".95" style="transform-origin:320.6px 181.2px;animation-delay:0.99s"/>
+            <circle class="sd-calc-dot" cx="321.19" cy="177.89" r=".95" style="transform-origin:321.19px 177.89px;animation-delay:1.01s"/>
+            <circle class="sd-calc-dot" cx="324.17" cy="182.76" r=".95" style="transform-origin:324.17px 182.76px;animation-delay:1.03s"/>
+            <circle class="sd-calc-dot" cx="324.2" cy="179.51" r=".95" style="transform-origin:324.2px 179.51px;animation-delay:1.06s"/>
+            <circle class="sd-calc-dot" cx="327.12" cy="182.52" r=".95" style="transform-origin:327.12px 182.52px;animation-delay:1.08s"/>
+            <circle class="sd-calc-dot" cx="327.5" cy="186.24" r=".95" style="transform-origin:327.5px 186.24px;animation-delay:1.1s"/>
+            <circle class="sd-calc-dot" cx="328.53" cy="175.03" r=".95" style="transform-origin:328.53px 175.03px;animation-delay:1.12s"/>
+            <circle class="sd-calc-dot" cx="329.03" cy="181.3" r=".95" style="transform-origin:329.03px 181.3px;animation-delay:1.14s"/>
+            <circle class="sd-calc-dot" cx="329.78" cy="179.11" r=".95" style="transform-origin:329.78px 179.11px;animation-delay:1.17s"/>
+            <circle class="sd-calc-dot" cx="330.24" cy="176.2" r=".95" style="transform-origin:330.24px 176.2px;animation-delay:1.19s"/>
+            <circle class="sd-calc-dot" cx="330.93" cy="174.46" r=".95" style="transform-origin:330.93px 174.46px;animation-delay:1.21s"/>
+            <circle class="sd-calc-dot" cx="331.49" cy="182.13" r=".95" style="transform-origin:331.49px 182.13px;animation-delay:1.23s"/>
+            <circle class="sd-calc-dot" cx="332.36" cy="187.09" r=".95" style="transform-origin:332.36px 187.09px;animation-delay:1.25s"/>
+            <circle class="sd-calc-dot" cx="333.69" cy="178.15" r=".95" style="transform-origin:333.69px 178.15px;animation-delay:1.28s"/>
+            <path class="sd-calc-line sd-calc-trend" style="transform-origin:295.18px 180.95px;animation-delay:.12s" d="M295.18 180.95L299.33 181.18L303.47 181.36L307.62 181.5L311.76 181.6L315.91 181.65L320.05 181.66L324.2 181.62L328.34 181.55L332.49 181.43L336.63 181.26"/>
+          </g>
           <!-- logo da Treevia só na tela verde-escura: depois que o pacote chega (antes do mapa) e enquanto o dado volta -->
           <g class="sd-idle-logo"><circle cx="285" cy="164" r="23"/><image href="logo.png" x="266" y="148.5" width="38" height="31.2" preserveAspectRatio="xMidYMid meet"/></g>
           <rect class="sd-flash" x="224" y="126" width="122" height="76" rx="4"/>
@@ -297,7 +408,7 @@
 
         <!-- pacote de dados descendo e mini-mapa subindo -->
         <g class="sd-packet"><rect x="-20" y="-8" width="40" height="16" rx="4"/><text x="0" y="2.8">011101</text></g>
-        <g class="sd-up"><rect class="sd-up-card" x="-13" y="-9" width="26" height="18" rx="3"/><rect class="sd-up-plot" x="-9" y="-6" width="8" height="6"/><rect class="sd-up-plot2" x="1" y="-6" width="8" height="6"/><path class="sd-up-river" d="M-13 5c5-3 10 2 15-1s7-2 11-1"/></g>
+        <g class="sd-up"><g class="sd-up-map"><rect class="sd-up-card" x="-13" y="-9" width="26" height="18" rx="3"/><rect class="sd-up-plot" x="-9" y="-6" width="8" height="6"/><rect class="sd-up-plot2" x="1" y="-6" width="8" height="6"/><path class="sd-up-river" d="M-13 5c5-3 10 2 15-1s7-2 11-1"/></g><g class="sd-up-calc"><rect class="sd-up-calc-card" x="-13" y="-9" width="26" height="18" rx="3"/><path class="sd-up-calc-axis" d="M-9-6V5H9"/><path class="sd-up-calc-diag" d="M-9 5L8-6"/><circle class="sd-up-calc-dot" cx="-5.5" cy="1.5" r="1.3"/><circle class="sd-up-calc-dot" cx="-2" cy="-1.8" r="1.3"/><circle class="sd-up-calc-dot" cx="1" cy=".6" r="1.3"/><circle class="sd-up-calc-dot" cx="4.2" cy="-3.6" r="1.3"/><circle class="sd-up-calc-dot" cx="6" cy="-1.2" r="1.3"/></g></g>
       </svg>
       <p>Carregue a área e busque uma imagem.</p>
     </div>

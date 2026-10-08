@@ -7,6 +7,7 @@
 //   maskAsset   raster usado para nuvem/sem dado; classify(v) => 'clear' | 'cloud' | 'nodata' (v NaN = fora da cena)
 //   mosaic      junta os tiles da mesma data (groupKey) num único recorte
 //   static      produto sem data (DEM): busca sem filtro de data
+//   period      período real de aquisição dos produtos static (a data do STAC é só nominal); mostrado como "Data"
 //   cloudFree   sem nuvem no produto (radar, DEM): a máscara só indica sem dado
 //   minWindowDays janela mínima de busca (produtos anuais)
 const PC_STAC = 'https://planetarycomputer.microsoft.com/api/stac/v1/search';
@@ -178,10 +179,25 @@ const SENSORS = {
     about: 'Modelo de elevação global feito com a missão TanDEM-X. Dá a altitude do terreno, sem data.',
     stac: PC_STAC, collections: ['cop-dem-glo-30'],
     dtype: 'float32', nodata: -9999, refAsset: 'data', maskAsset: 'data',
-    mosaic: true, static: true, cloudFree: true,
+    mosaic: true, static: true, cloudFree: true, period: '2011 a 2015', // TanDEM-X; o STAC traz 2021-04-22 (publicação)
     bands: [{ asset: 'data', name: 'elevation', code: 'DEM' }],
     classify: v => isNum(v) ? 'clear' : 'nodata',
     satellite: () => 'Copernicus DEM',
+    scaleFor: () => ({ scale: 1, offset: 0, unit: 'm' }),
+    dedupeKey: it => it.id,
+    version: it => 0,
+    composites: [{ label: 'Altitude', b: ['elevation', 'elevation', 'elevation'] }],
+  },
+  srtm: {
+    label: 'SRTM (NASADEM)', short: 'SRTM', group: 'secondary', res: 30, since: null,
+    about: 'Altitude medida por radar do ônibus espacial em 2000, reprocessada pela NASA. Alternativa ao Copernicus DEM.',
+    stac: PC_STAC, collections: ['nasadem'],
+    // tiles de 1° em EPSG:4326, int16 em metros, RasterPixelIsPoint
+    dtype: 'int16', nodata: -32768, refAsset: 'elevation', maskAsset: 'elevation',
+    mosaic: true, static: true, cloudFree: true, period: '11 a 22/02/2000', // voo do Endeavour; o STAC traz só 2000-02-20
+    bands: [{ asset: 'elevation', name: 'elevation', code: 'SRTM' }],
+    classify: v => (!isNum(v) || v === -32768) ? 'nodata' : 'clear',
+    satellite: () => 'SRTM',
     scaleFor: () => ({ scale: 1, offset: 0, unit: 'm' }),
     dedupeKey: it => it.id,
     version: it => 0,
@@ -253,6 +269,20 @@ async function readVectorFiles(files) {
   const json = files.find(f => ext(f) === 'geojson' || ext(f) === 'json');
   if (json) return { obj: JSON.parse(await json.text()), base: base(json) };
 
+  const kml = byExt('kml');
+  if (kml) return { obj: parseKML(await kml.text()), base: base(kml) };
+  const kmz = byExt('kmz');
+  if (kmz) {
+    // KMZ = zip com o .kml (normalmente doc.kml na raiz)
+    let entries;
+    try { entries = fflate.unzipSync(new Uint8Array(await kmz.arrayBuffer())); }
+    catch (e) { throw new Error('Não foi possível abrir o .kmz (arquivo corrompido ou não é um KMZ).'); }
+    const names = Object.keys(entries).filter(n => /\.kml$/i.test(n));
+    const main = names.find(n => /^doc\.kml$/i.test(n)) || names[0];
+    if (!main) throw new Error('O .kmz não contém um arquivo .kml.');
+    return { obj: parseKML(new TextDecoder().decode(entries[main])), base: base(kmz) };
+  }
+
   const zip = byExt('zip');
   if (zip) {
     let res = await shp(await zip.arrayBuffer());
@@ -261,12 +291,43 @@ async function readVectorFiles(files) {
   }
 
   const shpFile = byExt('shp');
-  if (!shpFile) throw new Error('Selecione um .geojson, um .zip com shapefile ou os arquivos .shp + .dbf + .prj.');
+  if (!shpFile) throw new Error('Selecione um .geojson, um .kml/.kmz, um .zip com shapefile ou os arquivos .shp + .dbf + .prj.');
   const prj = byExt('prj'), dbf = byExt('dbf'), cpg = byExt('cpg');
   const geoms = shp.parseShp(await shpFile.arrayBuffer(), prj ? await prj.text() : undefined);
-  const obj = dbf ? shp.combine([geoms, shp.parseDbf(await dbf.arrayBuffer(), cpg ? await cpg.arrayBuffer() : undefined)])
+  const obj = dbf ? shp.combine([geoms, shp.parseDbf(await dbf.arrayBuffer(), cpg ? (await cpg.text()).trim() : undefined)])
     : { type: 'FeatureCollection', features: geoms.map(g => ({ type: 'Feature', properties: {}, geometry: g })) };
   return { obj, base: base(shpFile), noPrj: !prj };
+}
+
+// ---------- KML ----------
+// KML => FeatureCollection GeoJSON. Cada Placemark vira um Feature com seus polígonos (inclusive dentro de
+// MultiGeometry); Placemark sem polígono (ponto, linha) vira geometria ignorada. KML é sempre lon,lat[,alt] em WGS84.
+// Feito com regex (sem DOMParser) para rodar igual no navegador e nos testes; aceita prefixo de namespace (kml:Polygon).
+function parseKML(text) {
+  const blocks = (s, name) => [...s.matchAll(new RegExp(`<(?:[\\w-]+:)?${name}\\b[^>]*>([\\s\\S]*?)</(?:[\\w-]+:)?${name}\\s*>`, 'g'))].map(m => m[1]);
+  const ring = s => {
+    const c = blocks(s, 'coordinates')[0];
+    if (!c) return null;
+    const pts = c.trim().split(/\s+/).map(t => t.split(',').slice(0, 2).map(Number)).filter(p => p.length === 2 && p.every(Number.isFinite));
+    if (pts.length < 3) return null;
+    const [f, l] = [pts[0], pts.at(-1)];
+    if (f[0] !== l[0] || f[1] !== l[1]) pts.push([...f]); // fecha o anel
+    return pts;
+  };
+  const polygon = s => {
+    const outer = ring(blocks(s, 'outerBoundaryIs')[0] || '');
+    return outer && [outer, ...blocks(s, 'innerBoundaryIs').map(ring).filter(Boolean)];
+  };
+  text = text.replace(/<!--[\s\S]*?-->/g, ''); // polígono comentado não é talhão
+  const features = blocks(text, 'Placemark').map(pm => {
+    const name = (blocks(pm, 'name')[0] || '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').trim();
+    const polys = blocks(pm, 'Polygon').map(polygon).filter(Boolean);
+    const geometry = polys.length > 1 ? { type: 'MultiPolygon', coordinates: polys }
+      : polys.length ? { type: 'Polygon', coordinates: polys[0] }
+      : { type: /<(?:[\w-]+:)?Point\b/.test(pm) ? 'Point' : 'LineString', coordinates: [] };
+    return { type: 'Feature', properties: name ? { name } : {}, geometry };
+  });
+  return { type: 'FeatureCollection', features };
 }
 
 // ---------- GeoJSON ----------
@@ -292,7 +353,7 @@ function parseGeoJSON(obj) {
     else if (g.type === 'MultiPolygon') polys.push(...g.coordinates);
     else ignored++;
   }
-  if (!polys.length) throw new Error('Nenhum polígono encontrado no GeoJSON.');
+  if (!polys.length) throw new Error('Nenhum polígono encontrado no arquivo.');
 
   let toLL = c => c;
   if (srcEpsg !== 4326) {
@@ -392,6 +453,9 @@ async function signHref(href) {
   }
   return href + (href.includes('?') ? '&' : '?') + tok.token;
 }
+
+// Data mostrada de uma cena (dd/mm/aaaa) ou, nos produtos sem data, o período real de aquisição
+function sceneDate(sensor, cand) { return SENSORS[sensor].period || cand.day.split('-').reverse().join('/'); }
 
 function isoDay(d) { return d.toISOString().slice(0, 10); }
 function addDays(day, n) { const d = new Date(day + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return isoDay(d); }
@@ -547,6 +611,48 @@ async function checkCandidate(cand, sensor, geo) {
   }
   return { n, cloudPct: 100 * cloud / n, nodataPct: 100 * nodata / n };
 }
+
+// Percorre as candidatas a partir de `from` até achar uma limpa e conseguir exibi-la (show).
+// Erro na verificação ou no download marca a cena como 'error' e segue para a próxima.
+// Devolve o índice exibido, -1 se nenhuma serviu, ou null se a busca foi substituída (alive() falso):
+// nesse caso não mexe em mais nada nem chama show.
+async function pickCandidate(cands, from, { tol, check, show, alive, onUpdate = () => {} }) {
+  for (let i = from; i < cands.length; i++) {
+    if (!alive()) return null;
+    const c = cands[i];
+    if ((c.sceneCloud ?? 0) >= 99 && tol < 99) { c.status = 'skip'; onUpdate(c, i); continue; }
+    c.status = 'checking'; onUpdate(c, i);
+    try {
+      const r = await check(c);
+      if (!alive()) return null;
+      c.check = r;
+      c.status = r.nodataPct > 0 ? 'nodata' : r.cloudPct > tol ? 'cloud' : 'ok';
+      onUpdate(c, i);
+      if (c.status !== 'ok') continue;
+      await show(c, i);
+      return alive() ? i : null;
+    } catch (err) {
+      if (!alive()) return null;
+      c.status = 'error'; c.error = err.message; onUpdate(c, i, err);
+    }
+  }
+  return -1;
+}
+
+// Cena da animação da tela vazia pedida na URL (?anim=calc | ?anim=mapa); null = manter a do HTML
+const ANIM_SCENES = {
+  calc: 'Satélite enviando dados que viram cálculos de inventário no computador',
+  mapa: 'Satélite enviando dados que viram um mapa no computador',
+};
+function animScene(search) {
+  const v = (new URLSearchParams(search).get('anim') || '').toLowerCase();
+  return v in ANIM_SCENES ? v : null;
+}
+
+// Texto seguro dentro de HTML (inclusive em atributos entre aspas)
+function escHtml(t) { return String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+// Dia no fuso do usuário (toISOString daria o dia UTC: no Brasil, depois das 21h já seria amanhã)
+function localDay(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 
 async function pool(tasks, k) {
   const res = new Array(tasks.length); let i = 0;
@@ -779,7 +885,8 @@ function zipFile(name, buf) {
 }
 
 globalThis.Core = {
-  SENSORS, MODIS_SINU, readVectorFiles, zipFile, parseGeoJSON, stacSearch, searchRange, orderCandidates, checkCandidate, loadImage,
+  SENSORS, MODIS_SINU, readVectorFiles, zipFile, parseKML, parseGeoJSON, stacSearch, searchRange, orderCandidates, checkCandidate, pickCandidate, loadImage,
+  escHtml, localDay, sceneDate, animScene, ANIM_SCENES,
   buildGeoTIFF, percentiles, previewScale, maxZoom, fitView, clampView, viewTransform, zoomAt, panBy, canvasToPixel, pixelValues, pixelLonLat, hasNdvi, ndvi, ndviAt, ndviColor, NDVI_STOPS, addDays, isoDay, crsLabel, isGeographic,
   // expostos para os testes
   ensureProj, projectPolys, pointInRing, footprintContains, rasterize, signHref, assetOf, gridOf, epsgOf, itemDates,

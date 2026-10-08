@@ -2,7 +2,15 @@
 const $ = id => document.getElementById(id);
 const state = { geo: null, fileBase: 'talhoes', cands: [], idx: -1, img: null, run: 0, params: null, sel: null };
 
-$('date').value = Core.isoDay(new Date());
+$('date').value = Core.localDay(new Date());
+
+// animação da tela vazia: o HTML define a cena padrão; ?anim=mapa ou ?anim=calc na URL troca
+const animScene = Core.animScene(location.search);
+if (animScene) {
+  const svg = document.querySelector('.sd-anim');
+  svg.dataset.scene = animScene;
+  svg.setAttribute('aria-label', Core.ANIM_SCENES[animScene]);
+}
 
 // ---------- satélite ----------
 // Sentinel-2 e Landsat 8/9 ficam no seletor; os secundários em "Outros", como cartões com resolução e finalidade
@@ -79,8 +87,8 @@ function renderTable() {
   $('candSummary').textContent = `Cenas avaliadas (${evaluated} de ${state.cands.length})`;
   $('candBody').innerHTML = state.cands.map((c, i) => {
     const [cls, txt] = STATUS[c.status] || ['', '–'];
-    return `<tr class="${i === state.idx && c.status === 'ok' ? 'sel' : ''}" title="${c.item.id}${c.error ? '\n' + c.error : ''}">` +
-      `<td>${fmtDate(c.day)}</td><td>${fmtDelta(c.delta)}</td><td>${c.satellite}</td><td>${fmtPct(c.sceneCloud)}</td>` +
+    return `<tr class="${i === state.idx && c.status === 'ok' ? 'sel' : ''}" title="${Core.escHtml(c.item.id + (c.error ? '\n' + c.error : ''))}">` +
+      `<td>${Core.sceneDate(state.params.sensor, c)}</td><td>${Core.SENSORS[state.params.sensor].static ? '–' : fmtDelta(c.delta)}</td><td>${Core.escHtml(c.satellite)}</td><td>${fmtPct(c.sceneCloud)}</td>` +
       `<td>${c.check ? fmtPct(c.check.cloudPct) : '–'}</td><td>${c.status ? `<span class="pill ${cls}">${txt}</span>` : '–'}</td></tr>`;
   }).join('') || '<tr><td colspan="6">Nenhuma cena encontrada.</td></tr>';
 }
@@ -112,50 +120,52 @@ async function runSearch() {
   } catch (err) { console.error(err); setStatus(err.message, 'err'); }
 }
 
+// Busca a próxima cena limpa; se outra busca começou (state.run mudou), esta para sem mexer na tela
 async function nextCandidate(run) {
   const { sensor, tol } = state.params;
-  for (let i = state.idx + 1; i < state.cands.length; i++) {
-    if (run !== state.run) return;
-    const c = state.cands[i];
-    if ((c.sceneCloud ?? 0) >= 99 && tol < 99) { c.status = 'skip'; renderTable(); continue; }
-    c.status = 'checking'; renderTable();
-    setStatus(`Verificando nuvens em ${fmtDate(c.day)}…`, 'busy');
-    try {
-      c.check = await Core.checkCandidate(c, sensor, state.geo);
-      c.status = c.check.nodataPct > 0 ? 'nodata' : c.check.cloudPct > tol ? 'cloud' : 'ok';
-    } catch (err) { console.error(err); c.status = 'error'; c.error = err.message; }
-    renderTable();
-    if (c.status === 'ok') { state.idx = i; renderTable(); return showCandidate(c, run); }
-  }
-  state.idx = state.cands.length;
+  const i = await Core.pickCandidate(state.cands, state.idx + 1, {
+    tol, alive: () => run === state.run,
+    check: c => Core.checkCandidate(c, sensor, state.geo),
+    show: (c, i) => showCandidate(c, i, run),
+    onUpdate: (c, i, err) => {
+      if (err) console.error(err);
+      if (c.status === 'checking') setStatus(`Verificando nuvens em ${fmtDate(c.day)}…`, 'busy');
+      renderTable();
+    },
+  });
+  if (i === null || i >= 0) return;
+  state.idx = state.cands.length; renderTable();
   setStatus('Nenhuma cena limpa na janela. Aumente a janela ou a nuvem aceita.', 'err');
 }
 
-async function showCandidate(c, run) {
+// Baixa e mostra a cena; um erro sobe para pickCandidate, que marca a cena e segue para a próxima
+async function showCandidate(c, i, run) {
   const { sensor } = state.params;
+  state.idx = i; renderTable();
   setStatus(`Baixando bandas de ${fmtDate(c.day)}…`, 'busy');
+  let img;
   try {
-    const img = await Core.loadImage(c, sensor, state.geo, state.params.buffer,
-      (k, n) => setStatus(`Baixando bandas de ${fmtDate(c.day)}… ${k}/${n}`, 'busy'));
-    if (run !== state.run) return;
-    state.img = img; state.sel = null; $('pixelPop').classList.add('hidden');
-    const s = Core.SENSORS[sensor];
-    $('meta').innerHTML = [
-      ...(s.static ? [] : [['Data', fmtDate(c.day)], ['Diferença', fmtDelta(c.delta)]]), ['Satélite', c.satellite],
-      ...(s.cloudFree ? [] : [['Nuvem nos talhões', fmtPct(c.check.cloudPct)]]),
-      ['Resolução', Core.isGeographic(img.epsg) ? `≈ ${Math.round(img.res * 111320)} m` : `${+img.res.toFixed(2)} m`],
-      ['Projeção', Core.crsLabel(img.epsg)],
-    ].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
-    $('composite').innerHTML = availableComposites().map((cp, i) => `<option value="${i}" title="${cp.title || cp.b.join(', ')}">${cp.label}</option>`).join('');
-    $('bandSummary').textContent = `Bandas (${img.bands.length})`;
-    $('bandlist').innerHTML = img.bands.map((b, i) => `<span><b>${i + 1}</b>${b.name}</span>`).join('');
-    state.fileName = `${state.fileBase}_${s.short}_${c.day}.tif`;
-    $('dlInfo').textContent = `${state.fileName.replace(/\.tif$/, '.zip')} · ${img.W} × ${img.H} px`;
-    showResult(true);
-    state.view = null; renderBase();
-    draw();
-    setStatus('');
-  } catch (err) { console.error(err); setStatus('Erro ao baixar as bandas: ' + err.message, 'err'); }
+    img = await Core.loadImage(c, sensor, state.geo, state.params.buffer,
+      (k, n) => run === state.run && setStatus(`Baixando bandas de ${fmtDate(c.day)}… ${k}/${n}`, 'busy'));
+  } catch (err) { throw new Error('Erro ao baixar as bandas: ' + err.message); }
+  if (run !== state.run) return;
+  state.img = img; state.sel = null; $('pixelPop').classList.add('hidden');
+  const s = Core.SENSORS[sensor];
+  $('meta').innerHTML = [
+    ['Data', Core.sceneDate(sensor, c)], ...(s.static ? [] : [['Diferença', fmtDelta(c.delta)]]), ['Satélite', Core.escHtml(c.satellite)],
+    ...(s.cloudFree ? [] : [['Nuvem nos talhões', fmtPct(c.check.cloudPct)]]),
+    ['Resolução', Core.isGeographic(img.epsg) ? `≈ ${Math.round(img.res * 111320)} m` : `${+img.res.toFixed(2)} m`],
+    ['Projeção', Core.crsLabel(img.epsg)],
+  ].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+  $('composite').innerHTML = availableComposites().map((cp, i) => `<option value="${i}" title="${Core.escHtml(cp.title || cp.b.join(', '))}">${cp.label}</option>`).join('');
+  $('bandSummary').textContent = `Bandas (${img.bands.length})`;
+  $('bandlist').innerHTML = img.bands.map((b, i) => `<span><b>${i + 1}</b>${b.name}</span>`).join('');
+  state.fileName = `${state.fileBase}_${s.short}_${c.day}.tif`;
+  $('dlInfo').textContent = `${state.fileName.replace(/\.tif$/, '.zip')} · ${img.W} × ${img.H} px`;
+  showResult(true);
+  state.view = null; renderBase();
+  draw();
+  setStatus('');
 }
 
 // ---------- visualização ----------
@@ -369,7 +379,7 @@ $('btnDownload').addEventListener('click', async () => {
   setStatus('Gerando .zip…', 'busy');
   try {
     const buf = Core.buildGeoTIFF(state.img, {
-      SENSOR: Core.SENSORS[p.sensor].label, SATELLITE: c.satellite, ITEM_ID: (c.items || [c.item]).map(i => i.id).join(','), DATETIME: c.item.properties.datetime || c.item.properties.start_datetime,
+      SENSOR: Core.SENSORS[p.sensor].label, SATELLITE: c.satellite, ITEM_ID: (c.items || [c.item]).map(i => i.id).join(','), DATETIME: c.item.properties.datetime || c.item.properties.start_datetime, ACQUISITION: Core.sceneDate(p.sensor, c),
       TARGET_DATE: p.day, DELTA_DAYS: c.delta, BUFFER_M: p.buffer,
       CLOUD_PCT_TALHOES: c.check.cloudPct.toFixed(3), SCENE_CLOUD_PCT: c.sceneCloud ?? '',
     });

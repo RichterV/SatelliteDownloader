@@ -66,6 +66,13 @@ for (const [key, s] of Object.entries(Core.SENSORS)) {
     for (const v of [0, 1, 2, 3, 4, 8, 9, 10, 255, 0.5, 21824, 65535, -32768]) assert.notEqual(s.classify(v), 'cloud', 'valor ' + v);
   });
 
+  test(`${key}: produto sem data tem período de aquisição; os demais usam a data da cena`, () => {
+    if (s.static) assert.ok(typeof s.period === 'string' && /\d{4}/.test(s.period), 'period com o ano');
+    else assert.equal(s.period, undefined);
+    const shown = Core.sceneDate(key, { day: '2025-07-23' });
+    assert.equal(shown, s.static ? s.period : '23/07/2025');
+  });
+
   test(`${key}: scaleFor devolve escala numérica para todas as bandas`, () => {
     const item = { id: 'x', properties: { 's2:processing_baseline': '05.10', 'earthsearch:boa_offset_applied': true } };
     for (const b of s.bands) {
