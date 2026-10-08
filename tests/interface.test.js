@@ -76,7 +76,7 @@ test('tela vazia: animação em loop (só CSS) que some quando a imagem aparece'
   const z = +css.match(/@keyframes sd-zoom \{[\s\S]*?translate\([^)]*\) scale\(([\d.]+)\)/)[1];
   assert.ok(140 * z <= 400 && 100 * z <= 260, `monitor cabe no zoom (scale ${z})`);
   assert.match(empty[1], /<image class="sd-logo" href="logo\.png"/, 'logo da Treevia no computador');
-  assert.match(css, /--sd-t: 13s/, 'loop de 13 s (2 s de entrada orbitando + 10 s da história + 1 s de saída)');
+  assert.match(css, /--sd-t: 15s/, 'loop de 15 s (2 s de entrada orbitando + 10 s da história + 2 s de entrega na fazenda + 1 s de saída)');
   for (const k of ['sd-drop', 'sd-zoom', 'sd-calc-show', 'sd-up']) {
     assert.match(css, new RegExp(`@keyframes ${k} \\{`), k);
     assert.match(css, new RegExp(`animation: ${k} var\\(--sd-t\\)[^;]*infinite`), `${k} em loop`);
@@ -231,7 +231,7 @@ test('tela vazia: zoom leve (cálculos só com o zoom completo) e feixe sobre a 
   const zOut = +zoom.match(/\n {2}[\d.]+%, ([\d.]+)% \{ transform: translate/)[1];
   const showKf = css.match(/@keyframes sd-calc-show \{([^\n]*)\}/)[1];
   const visibleFrom = +showKf.match(/([\d.]+)% \{ visibility: visible; \}/)[1];
-  const hiddenFrom = +showKf.match(/([\d.]+)%, 92\.31%, 100% \{ opacity: 0; visibility: hidden; \}/)[1];
+  const hiddenFrom = +showKf.match(/([\d.]+)%(?:, [\d.]+%)*, 100% \{ opacity: 0; visibility: hidden; \}/)[1];
   assert.ok(visibleFrom >= zIn && hiddenFrom <= zOut, `cálculos visíveis só entre o fim do zoom (${zIn}%) e o início da saída (${zOut}%)`);
   assert.match(css, /@keyframes sd-ui \{[^\n]*visibility: hidden/, 'tela da plataforma oculta quando transparente');
   // satélite sem o logo (só a faixa verde)
@@ -287,7 +287,7 @@ test('tela vazia: só a cena de cálculos no zoom (o mapa florestal foi removido
 });
 
 test('tela vazia: tudo da cena de cálculos termina de entrar antes de a tela começar a sumir', () => {
-  const T = 13, fade = +css.match(/@keyframes sd-calc-show \{[^\n]*?52\.3%, ([\d.]+)% \{ opacity: 1/)[1];
+  const T = +css.match(/--sd-t: ([\d.]+)s/)[1], fade = +css.match(/@keyframes sd-calc-show \{[^\n]*?[\d.]+%, ([\d.]+)% \{ opacity: 1/)[1];
   const calc = calcMarkup();
   const kfOf = { 'sd-calc-pop': 'sd-calc-pop', 'sd-calc-dot': 'sd-calc-dot', 'sd-calc-odo': 'sd-calc-odo', 'sd-calc-line sd-calc-diag': 'sd-calc-draw',
     'sd-calc-line sd-calc-trend': 'sd-calc-trend', 'sd-calc-band': 'sd-calc-fade', 'sd-calc-cover': 'sd-calc-type' };
@@ -340,3 +340,85 @@ test('tela vazia: pontos dos gráficos dentro das áreas de plotagem e linhas cr
     assert.deepEqual([+m[1], +m[2]], [+m[3], +m[4]], 'origem da escala no primeiro ponto da linha');
 });
 
+
+// ======================= tela vazia: entrega na fazenda do cliente =======================
+// quadros de uma keyframe: [[porcentagem, corpo]], ordenados
+const frames = name => {
+  const h = '@keyframes ' + name + ' {';
+  let i = css.indexOf(h) + h.length, d = 1, j = i;
+  assert.ok(i >= h.length, `keyframe ${name}`);
+  while (d) { if (css[j] === '{') d++; else if (css[j] === '}') d--; j++; }
+  return [...css.slice(i, j - 1).matchAll(/([\d.%,\s]+)\{([^}]*)\}/g)]
+    .flatMap(m => m[1].split(',').map(t => parseFloat(t)).filter(t => !isNaN(t)).map(t => [t, m[2].trim()]))
+    .sort((a, b) => a[0] - b[0]);
+};
+const T15 = () => +css.match(/--sd-t: ([\d.]+)s/)[1];
+const PAUSE = [80, 93.33]; // 12 s a 14 s do ciclo de 15 s: satélite parado entregando
+
+test('tela vazia: entrega na fazenda (pin, talhões, árvores, gestor com joinha e selo "Inventário pronto")', () => {
+  const svg = svgAnim();
+  const farm = svg.match(/<g class="sd-farm">[\s\S]*?\n {10}<\/g><\/g>/)[0];
+  assert.ok((farm.match(/<path class="p\d"/g) || []).length >= 4, 'talhões');
+  assert.ok((farm.match(/class="sd-farm-tree"/g) || []).length >= 10, 'árvores crescendo');
+  for (const cls of ['sd-farm-ring', 'sd-farm-pin', 'sd-farmer', 'sd-farmer-arm', 'sd-tablet', 'sd-badge']) assert.ok(farm.includes(`class="${cls}`), cls);
+  assert.match(farm, /<text[^>]*><tspan>✓<\/tspan> Inventário pronto<\/text>/);
+  // fazenda desenhada antes do satélite e do computador (não os cobre); feixe só na cópia da frente do satélite
+  assert.ok(svg.indexOf('class="sd-farm"') < svg.indexOf('class="sd-orbit-front"'));
+  const back = svg.slice(svg.indexOf('class="sd-orbit-back"'), svg.indexOf('class="sd-globe"'));
+  const front = svg.slice(svg.indexOf('class="sd-orbit-front"'), svg.indexOf('<!-- computador'));
+  assert.doesNotMatch(back, /sd-give/);
+  assert.match(front, /<g class="sd-give"><path class="sd-give-beam"[^>]*\/>(<rect class="sd-give-dot"[^>]*\/>){3}<\/g>/);
+});
+
+test('tela vazia: fazenda no Brasil e fora do computador (escala 1,7 em torno de 186,186)', () => {
+  const farm = svgAnim().match(/<g class="sd-farm"><g transform="translate\(186 186\) scale\(([\d.]+)\) translate\(-186 -186\)">([\s\S]*?)\n {10}<\/g><\/g>/);
+  assert.ok(farm, 'grupo ampliado em torno do centro da fazenda');
+  const k = +farm[1], xs = [], ys = [];
+  for (const m of farm[2].matchAll(/\b(?:cx|x)="([\d.]+)"/g)) xs.push(186 + (+m[1] - 186) * k);
+  for (const m of farm[2].matchAll(/\b(?:cy|y)="([\d.]+)"/g)) ys.push(186 + (+m[1] - 186) * k);
+  // América do Sul projetada: x 125-222, y 123-245; tela do computador começa em x 235
+  assert.ok(Math.min(...xs) > 125 && Math.max(...xs) < 235, `x ${Math.min(...xs).toFixed(1)}..${Math.max(...xs).toFixed(1)}`);
+  assert.ok(Math.min(...ys) > 123 && Math.max(...ys) < 245, `y ${Math.min(...ys).toFixed(1)}..${Math.max(...ys).toFixed(1)}`);
+});
+
+test('tela vazia: ciclo ganhou 2 s de pausa para a entrega; satélite e cena parados nesse intervalo', () => {
+  assert.equal(T15(), 15);
+  for (const k of ['sd-orbit-front', 'sd-glow', 'sd-zoom', 'sd-drop', 'sd-up', 'sd-calc-show']) {
+    const f = frames(k), a = f.find(([p]) => p === PAUSE[0]), b = f.find(([p]) => p === PAUSE[1]);
+    assert.ok(a && b && a[1] === b[1], `${k}: mesmo estado em ${PAUSE[0]}% e ${PAUSE[1]}%`);
+    assert.ok(!f.some(([p]) => p > PAUSE[0] && p < PAUSE[1]), `${k}: nada se move durante a entrega`);
+  }
+});
+
+test('tela vazia: ordem da entrega (flash, feixe, fazenda, gestor, selo, olho feliz) toda dentro da pausa', () => {
+  const T = T15();
+  const on = (k, prop = 'opacity') => frames(k).filter(([, b]) => new RegExp(String.raw`${prop}: (?!0;)[\d.]+`).test(b)).map(([p]) => p);
+  const flash = frames('sd-cam-flash').filter(([, b]) => /opacity: \.95/.test(b)).map(([p]) => p);
+  assert.equal(flash.length, 2, 'flash na captura e na entrega');
+  const beam = on('sd-give');
+  assert.ok(beam[0] >= flash[1] && beam.at(-1) < PAUSE[1], `feixe ${beam[0]}..${beam.at(-1)}% depois do flash (${flash[1]}%) e antes de o satélite sair`);
+  const farmOn = on('sd-farm')[0];
+  assert.ok(farmOn >= beam[0], 'fazenda aparece quando o feixe chega');
+  // tudo da fazenda termina de entrar antes de o satélite voltar a andar (contando os atrasos)
+  const settle = k => frames(k).filter(([, b]) => /scale\(1\)|translateY\(0\)/.test(b)).map(([p]) => p)[0];
+  const farm = svgAnim().match(/<g class="sd-farm">[\s\S]*?\n {10}<\/g><\/g>/)[0];
+  for (const [cls, k] of [['sd-farm-pop', 'sd-farm-pop'], ['sd-farm-tree', 'sd-farm-tree'], ['sd-farmer', 'sd-farmer'], ['sd-badge', 'sd-badge'], ['sd-farm-pin', 'sd-farm-pin']]) {
+    const delays = [...farm.matchAll(new RegExp(String.raw`<[^>]*class="${cls}"[^>]*>`, 'g'))].map(m => +((m[0].match(/animation-delay:([\d.]+)s/) || [0, 0])[1]));
+    assert.ok(delays.length, cls);
+    const end = settle(k) + Math.max(...delays) / T * 100;
+    assert.ok(end > PAUSE[0] && end < PAUSE[1], `${cls} termina em ${end.toFixed(2)}%`);
+  }
+  // gestor acena e o satélite fica feliz de novo durante o joinha
+  const thumb = frames('sd-thumb').filter(([, b]) => /rotate\(-/.test(b)).map(([p]) => p);
+  const happy = on('sd-happy');
+  const second = happy.filter(p => p > PAUSE[0]);
+  assert.ok(second.length && second[0] >= thumb[0] - 0.5 && second.at(-1) < PAUSE[1], `olho feliz (${second}) durante o joinha (${thumb})`);
+  assert.ok(happy.some(p => p < PAUSE[0]), 'continua feliz também ao receber o mini-gráfico');
+});
+
+test('tela vazia: sem animação (movimento reduzido) a fazenda aparece pronta e o feixe apagado', () => {
+  assert.match(css, /\.sd-farm \{ opacity: 1; animation: sd-farm var\(--sd-t\)/);
+  assert.match(css, /\.sd-give \{ opacity: 0; animation: sd-give var\(--sd-t\)/);
+  for (const cls of ['sd-farm-pop', 'sd-farm-tree', 'sd-farmer', 'sd-badge', 'sd-farm-pin'])
+    assert.doesNotMatch(css.match(new RegExp(String.raw`\.${cls} \{[^}]*\}`))[0], /transform: scale\(0\)|opacity: 0/, cls);
+});

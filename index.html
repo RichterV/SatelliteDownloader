@@ -83,8 +83,8 @@
 
   <section class="content">
     <div class="card empty" id="emptyState">
-      <!-- animação em loop (só CSS): satélite solta dados => computador => zoom na tela com cálculos de inventário => resultado volta ao satélite -->
-      <svg class="sd-anim" viewBox="0 0 400 260" role="img" aria-label="Satélite enviando dados que viram cálculos de inventário no computador">
+      <!-- animação em loop (só CSS): satélite solta dados => computador => zoom na tela com cálculos de inventário => resultado volta ao satélite => satélite entrega na fazenda do cliente -->
+      <svg class="sd-anim" viewBox="0 0 400 260" role="img" aria-label="Satélite envia dados, o computador calcula o inventário e o satélite entrega o resultado à fazenda do cliente">
         <defs>
           <!-- janelas dos números rolando (cena de cálculos) -->
           <clipPath id="sd-odo-clip-0"><rect x="236" y="150.3" width="30" height="5.2"/></clipPath>
@@ -92,6 +92,7 @@
           <clipPath id="sd-odo-clip-2"><rect x="304" y="150.3" width="30" height="5.2"/></clipPath>
           <clipPath id="sd-screen-clip"><rect x="224" y="126" width="122" height="76" rx="4"/></clipPath>
           <linearGradient id="sd-beam-grad" gradientUnits="userSpaceOnUse" x1="105.8" y1="90" x2="184.76" y2="177.69"><stop offset="0" stop-color="#fff3a6" stop-opacity=".85"/><stop offset="1" stop-color="#fff3a6" stop-opacity="0"/></linearGradient>
+          <linearGradient id="sd-give-grad" gradientUnits="userSpaceOnUse" x1="105.8" y1="90" x2="186" y2="186"><stop offset="0" stop-color="#b8f5cf" stop-opacity=".9"/><stop offset="1" stop-color="#7be3a0" stop-opacity=".35"/></linearGradient>
           <clipPath id="sd-globe-clip"><circle cx="200" cy="130" r="128"/></clipPath>
         </defs>
         <!-- satélite atrás da Terra (entrada orbitando); troca com a cópia da frente fora do disco -->
@@ -156,12 +157,23 @@
             <path class="sd-star" style="animation-delay:1s" d="M26 106l1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2z"/>
           </g>
 
+          <!-- entrega: a fazenda do cliente recebe o resultado e floresce (pin, talhões, árvores, gestor com joinha, selo) -->
+          <g class="sd-farm"><g transform="translate(186 186) scale(1.7) translate(-186 -186)">
+            <circle class="sd-farm-ring" cx="186" cy="186" r="6" style="transform-origin:186px 186px"/>
+            <g class="sd-farm-plot"><g class="sd-farm-pop" style="transform-origin:180.6px 181.8px;animation-delay:0s"><path class="p1" d="M176 178.5l9-.8.6 7.4-9.4.6z"/></g><g class="sd-farm-pop" style="transform-origin:191px 181.6px;animation-delay:0.1s"><path class="p2" d="M186.6 177.6l9.2.4-.6 7.6-8 .2z"/></g><g class="sd-farm-pop" style="transform-origin:181px 190.6px;animation-delay:0.2s"><path class="p3" d="M176.2 187l9.2-.6.4 7.4-9.6.2z"/></g><g class="sd-farm-pop" style="transform-origin:191px 190px;animation-delay:0.3s"><path class="p4" d="M186.8 186.2l8.4.4-.4 7.2-8.6-.2z"/></g></g>
+            <circle class="sd-farm-tree" cx="178.8" cy="181.2" r="1.1" style="transform-origin:178.8px 181.2px;animation-delay:0.0s"/><circle class="sd-farm-tree" cx="182.4" cy="180.8" r="1.1" style="transform-origin:182.4px 180.8px;animation-delay:0.04s"/><circle class="sd-farm-tree" cx="180.8" cy="183.6" r="1.1" style="transform-origin:180.8px 183.6px;animation-delay:0.08s"/><circle class="sd-farm-tree" cx="189.4" cy="180.6" r="1.1" style="transform-origin:189.4px 180.6px;animation-delay:0.12s"/><circle class="sd-farm-tree" cx="193" cy="180.8" r="1.1" style="transform-origin:193px 180.8px;animation-delay:0.16s"/><circle class="sd-farm-tree" cx="191.2" cy="183.4" r="1.1" style="transform-origin:191.2px 183.4px;animation-delay:0.2s"/><circle class="sd-farm-tree" cx="179" cy="189.8" r="1.1" style="transform-origin:179px 189.8px;animation-delay:0.24s"/><circle class="sd-farm-tree" cx="182.6" cy="189.4" r="1.1" style="transform-origin:182.6px 189.4px;animation-delay:0.28s"/><circle class="sd-farm-tree" cx="180.6" cy="192.2" r="1.1" style="transform-origin:180.6px 192.2px;animation-delay:0.32s"/><circle class="sd-farm-tree" cx="189.6" cy="188.8" r="1.1" style="transform-origin:189.6px 188.8px;animation-delay:0.36s"/><circle class="sd-farm-tree" cx="193" cy="189.2" r="1.1" style="transform-origin:193px 189.2px;animation-delay:0.4s"/><circle class="sd-farm-tree" cx="191.2" cy="191.6" r="1.1" style="transform-origin:191.2px 191.6px;animation-delay:0.44s"/>
+            <g class="sd-farm-pin"><path d="M186 177c-2.4-3-4-4.4-4-6.2a4 4 0 0 1 8 0c0 1.8-1.6 3.2-4 6.2z"/><circle cx="186" cy="170.6" r="1.4"/></g>
+            <g class="sd-farmer" style="transform-origin:168px 198px"><ellipse class="sd-farmer-shadow" cx="168" cy="198.6" rx="3.6" ry=".9"/><path class="sd-farmer-legs" d="M166.7 193.6v4.6M169.3 193.6v4.6"/><rect class="sd-tablet" x="161.4" y="188.4" width="3.6" height="4.6" rx=".5"/><path class="sd-tablet-line" d="M162.1 191.9l.9-1 .8.5 1-1.6"/><path class="sd-farmer-sleeve" d="M165.4 189.2l-1.2 1.4"/><rect class="sd-farmer-body" x="165" y="187" width="6" height="7" rx="1.6"/><circle class="sd-farmer-skin" cx="168" cy="184.3" r="2.6"/><path class="sd-farmer-helmet" d="M165.1 183.9a2.9 2.9 0 0 1 5.8 0zM164.6 183.9h6.8"/><g class="sd-farmer-arm" style="transform-origin:170.6px 188.4px"><path class="sd-farmer-sleeve" d="M170.6 188.4l3-3"/><circle class="sd-farmer-skin" cx="174.1" cy="184.9" r="1.05"/><rect class="sd-farmer-skin" x="173.7" y="182.3" width=".8" height="2" rx=".4"/></g></g>
+            <g class="sd-badge" style="transform-origin:192px 163px"><rect x="172" y="159.4" width="40" height="7.2" rx="3.6"/><text x="192" y="164.3"><tspan>✓</tspan> Inventário pronto</text></g>
+          </g></g>
           <!-- satélite -->
           <g class="sd-orbit-front">
           <circle class="sd-sat-glow" cx="95" cy="62" r="52"/>
           <g class="sd-sat-bob">
             <!-- feixe de captura: varre a América do Sul (Nordeste -> Amazônia -> Colômbia) antes de enviar o pacote -->
             <path class="sd-beam" d="M105.8 90L202.94 168.67Q195.46 189.58 173.88 194.83Z"/>
+            <!-- entrega: feixe verde leva o resultado do processamento até a fazenda do cliente -->
+            <g class="sd-give"><path class="sd-give-beam" d="M105.8 90L176 192Q186 197 196 179Z"/><rect class="sd-give-dot" x="104.6" y="88.8" width="2.4" height="2.4" rx=".5" style="animation-delay:0s"/><rect class="sd-give-dot" x="104.6" y="88.8" width="2.4" height="2.4" rx=".5" style="animation-delay:0.17s"/><rect class="sd-give-dot" x="104.6" y="88.8" width="2.4" height="2.4" rx=".5" style="animation-delay:0.34s"/></g>
             <g transform="translate(95 60) scale(1.35) translate(-95 -60) rotate(-20 95 60)">
               <line class="sd-ink-line" x1="75" y1="60" x2="80" y2="60"/>
               <line class="sd-ink-line" x1="110" y1="60" x2="115" y2="60"/>
