@@ -76,7 +76,7 @@ test('tela vazia: animação em loop (só CSS) que some quando a imagem aparece'
   const z = +css.match(/@keyframes sd-zoom \{[\s\S]*?translate\([^)]*\) scale\(([\d.]+)\)/)[1];
   assert.ok(140 * z <= 400 && 100 * z <= 260, `monitor cabe no zoom (scale ${z})`);
   assert.match(empty[1], /<image class="sd-logo" href="logo\.png"/, 'logo da Treevia no computador');
-  assert.match(css, /--sd-t: 15s/, 'loop de 15 s (2 s de entrada orbitando + 10 s da história + 2 s de entrega na fazenda + 1 s de saída)');
+  assert.match(css, /--sd-t: 13\.18s/, 'loop de 13,18 s (2 s de entrada orbitando + ~8,2 s da história com queda e zooms rápidos + 2 s de entrega na fazenda + 1 s de saída)');
   for (const k of ['sd-drop', 'sd-zoom', 'sd-calc-show', 'sd-up']) {
     assert.match(css, new RegExp(`@keyframes ${k} \\{`), k);
     assert.match(css, new RegExp(`animation: ${k} var\\(--sd-t\\)[^;]*infinite`), `${k} em loop`);
@@ -196,7 +196,9 @@ test('tela vazia: logo da Treevia só na tela verde-escura (ao receber o pacote 
   }
   assert.ok(seen > 100, 'logo aparece nas duas telas verdes');
   // aparece ao receber o pacote (antes dos cálculos) e na volta (depois deles)
-  assert.ok(at(logo, 43) > 0.9 && at(logo, 85) > 0.9, 'logo nas duas telas verdes');
+  let windows = 0, prev = false;
+  for (let t = 0; t <= 100; t += 0.1) { const v = at(logo, t) > 0.9; if (v && !prev) windows++; prev = v; }
+  assert.equal(windows, 2, 'logo nas duas telas verdes (duas janelas separadas)');
 });
 
 test('tela vazia: satélite com câmera, feixe de captura, identidade Treevia e olho expressivo', () => {
@@ -353,14 +355,15 @@ const frames = name => {
     .sort((a, b) => a[0] - b[0]);
 };
 const T15 = () => +css.match(/--sd-t: ([\d.]+)s/)[1];
-const PAUSE = [80, 93.33]; // 12 s a 14 s do ciclo de 15 s: satélite parado entregando
+// entrega: 2 s com o satélite parado; o fim do brilho de recepção (sd-glow) marca o início e o fim da pausa
+const PAUSE = (() => { const g = css.match(/@keyframes sd-glow \{[^\n]*?([\d.]+)%, ([\d.]+)%, 100% \{/); return [+g[1], +g[2]]; })();
 
-test('tela vazia: entrega na fazenda (pin, talhões, árvores, gestor com joinha e selo "Inventário pronto")', () => {
+test('tela vazia: entrega na fazenda (pin, talhões, árvores, gestor acenando e selo "Inventário pronto")', () => {
   const svg = svgAnim();
   const farm = svg.match(/<g class="sd-farm">[\s\S]*?\n {10}<\/g><\/g>/)[0];
   assert.ok((farm.match(/<path class="p\d"/g) || []).length >= 4, 'talhões');
   assert.ok((farm.match(/class="sd-farm-tree"/g) || []).length >= 10, 'árvores crescendo');
-  for (const cls of ['sd-farm-ring', 'sd-farm-pin', 'sd-farmer', 'sd-farmer-arm', 'sd-tablet', 'sd-badge']) assert.ok(farm.includes(`class="${cls}`), cls);
+  for (const cls of ['sd-farm-ring', 'sd-farm-pin', 'sd-farmer', 'sd-farmer-arm', 'sd-wave-lines', 'sd-tablet', 'sd-badge']) assert.ok(farm.includes(`class="${cls}`), cls);
   assert.match(farm, /<text[^>]*><tspan>✓<\/tspan> Inventário pronto<\/text>/);
   // fazenda desenhada antes do satélite e do computador (não os cobre); feixe só na cópia da frente do satélite
   assert.ok(svg.indexOf('class="sd-farm"') < svg.indexOf('class="sd-orbit-front"'));
@@ -382,7 +385,8 @@ test('tela vazia: fazenda no Brasil e fora do computador (escala 1,7 em torno de
 });
 
 test('tela vazia: ciclo ganhou 2 s de pausa para a entrega; satélite e cena parados nesse intervalo', () => {
-  assert.equal(T15(), 15);
+  assert.equal(T15(), 13.18);
+  assert.ok(Math.abs((PAUSE[1] - PAUSE[0]) / 100 * T15() - 2) < 0.01, 'pausa de 2 s');
   for (const k of ['sd-orbit-front', 'sd-glow', 'sd-zoom', 'sd-drop', 'sd-up', 'sd-calc-show']) {
     const f = frames(k), a = f.find(([p]) => p === PAUSE[0]), b = f.find(([p]) => p === PAUSE[1]);
     assert.ok(a && b && a[1] === b[1], `${k}: mesmo estado em ${PAUSE[0]}% e ${PAUSE[1]}%`);
@@ -408,11 +412,11 @@ test('tela vazia: ordem da entrega (flash, feixe, fazenda, gestor, selo, olho fe
     const end = settle(k) + Math.max(...delays) / T * 100;
     assert.ok(end > PAUSE[0] && end < PAUSE[1], `${cls} termina em ${end.toFixed(2)}%`);
   }
-  // gestor acena e o satélite fica feliz de novo durante o joinha
-  const thumb = frames('sd-thumb').filter(([, b]) => /rotate\(-/.test(b)).map(([p]) => p);
+  // gestor acena (mão aberta: o dedão sozinho parecia outro gesto) e o satélite fica feliz de novo durante o aceno
+  const thumb = frames('sd-wave').filter(([, b]) => /rotate\(-/.test(b)).map(([p]) => p);
   const happy = on('sd-happy');
   const second = happy.filter(p => p > PAUSE[0]);
-  assert.ok(second.length && second[0] >= thumb[0] - 0.5 && second.at(-1) < PAUSE[1], `olho feliz (${second}) durante o joinha (${thumb})`);
+  assert.ok(second.length && second[0] >= thumb[0] - 0.5 && second.at(-1) < PAUSE[1], `olho feliz (${second}) durante o aceno (${thumb})`);
   assert.ok(happy.some(p => p < PAUSE[0]), 'continua feliz também ao receber o mini-gráfico');
 });
 
@@ -421,4 +425,26 @@ test('tela vazia: sem animação (movimento reduzido) a fazenda aparece pronta e
   assert.match(css, /\.sd-give \{ opacity: 0; animation: sd-give var\(--sd-t\)/);
   for (const cls of ['sd-farm-pop', 'sd-farm-tree', 'sd-farmer', 'sd-badge', 'sd-farm-pin'])
     assert.doesNotMatch(css.match(new RegExp(String.raw`\.${cls} \{[^}]*\}`))[0], /transform: scale\(0\)|opacity: 0/, cls);
+});
+
+test('tela vazia: selo nítido (entra subindo, sem escala) e gestor acena com a mão aberta, sem dedo erguido', () => {
+  // animar escala a partir de 0 faz o navegador desenhar a camada pequena e ampliar: texto borrado
+  assert.doesNotMatch(css.match(/@keyframes sd-badge \{[^\n]*\}/)[0], /scale\(/);
+  assert.match(css, /\.sd-badge text \{[^}]*font: 700 4\.4px/);
+  const arm = svgAnim().match(/<g class="sd-farmer-arm"[^>]*>([\s\S]*?)<\/g>/)[1];
+  assert.doesNotMatch(arm, /<rect/, 'sem dedo (retângulo) na mão');
+  assert.match(arm, /<circle class="sd-farmer-skin"[^>]*r="1\.35"/, 'mão aberta');
+});
+
+test('tela vazia: queda do pacote e zooms rápidos', () => {
+  const T = T15(), sec = p => p / 100 * T;
+  // zoom de entrada e de saída: do monitor normal ao enquadrado em ~0,55 s
+  const z = frames('sd-zoom').map(([p, b]) => [sec(p), /scale/.test(b)]);
+  const zIn = z.find(([, s]) => s)[0] - z.filter(([t, s]) => !s && t < z.find(([, s2]) => s2)[0]).at(-1)[0];
+  const lastZoomed = z.filter(([, s]) => s).at(-1)[0], zOut = z.find(([t, s]) => !s && t > lastZoomed)[0] - lastZoomed;
+  assert.ok(zIn < 0.7 && zOut < 0.7, `zoom de entrada ${zIn.toFixed(2)} s e de saída ${zOut.toFixed(2)} s`);
+  // pacote: do primeiro quadro visível até bater na tela (flash)
+  const drop = frames('sd-drop').filter(([, b]) => /opacity: 1/.test(b)).map(([p]) => sec(p));
+  const hit = sec(+css.match(/@keyframes sd-flash \{[^}]*\}\s*([\d.]+)%/)[1]);
+  assert.ok(hit - drop[0] < 1.6, `pacote cai em ${(hit - drop[0]).toFixed(2)} s`);
 });
