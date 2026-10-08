@@ -1,21 +1,26 @@
 :root {
-  --bg: #f4f6f4; --card: #ffffff; --text: #18201b; --muted: #66726a; --border: #e1e6e2; --field: #f8faf8;
-  --accent: #2f7d4f; --accent-hover: #276a43; --accent-soft: #e6f2ea; --accent-text: #ffffff;
+  /* paleta do site da Treevia: limão #C0F01A (botões) + petróleo #1D4C4E (textos), verde #2a8a5e, cinzas slate */
+  --bg: #f8fafc; --card: #ffffff; --text: #1d4c4e; --muted: #3a6b6d; --border: #e2e8f0; --field: #f8fafc;
+  --accent: #2a8a5e; --accent-hover: #237350; --accent-soft: #eefbc8; --accent-text: #ffffff;
+  --primary: #c0f01a; --primary-text: #1d4c4e; --primary-hover: #1d4c4e; --primary-hover-text: #c0f01a; --primary-glow: rgba(192, 240, 26, .39);
   --bad: #c0362c; --bad-soft: #fbeceb; --warn: #a15c00;
-  --shadow: 0 1px 2px rgba(16, 24, 20, .04), 0 2px 8px rgba(16, 24, 20, .04);
+  --shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 2px 8px rgba(15, 23, 42, .05);
   --radius: 12px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #111513; --card: #191e1b; --text: #e6ebe7; --muted: #95a29a; --border: #2a312d; --field: #141916;
-    --accent: #5cbf83; --accent-hover: #74cf97; --accent-soft: #1f3327; --accent-text: #0d130f;
+    /* o site não tem tema escuro: petróleo bem escuro com o limão de destaque */
+    --bg: #0c1d1e; --card: #122a2c; --text: #e3eeee; --muted: #8fb0b0; --border: #234143; --field: #0f2324;
+    --accent: #c0f01a; --accent-hover: #d4ff4d; --accent-soft: #24402a; --accent-text: #12302f;
+    --primary: #c0f01a; --primary-text: #12302f; --primary-hover: #d4ff4d; --primary-hover-text: #12302f; --primary-glow: rgba(192, 240, 26, .18);
     --bad: #ef7b72; --bad-soft: #3a1f1d; --warn: #e0a24a;
     --shadow: none;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #111513; --card: #191e1b; --text: #e6ebe7; --muted: #95a29a; --border: #2a312d; --field: #141916;
-  --accent: #5cbf83; --accent-hover: #74cf97; --accent-soft: #1f3327; --accent-text: #0d130f;
+  --bg: #0c1d1e; --card: #122a2c; --text: #e3eeee; --muted: #8fb0b0; --border: #234143; --field: #0f2324;
+  --accent: #c0f01a; --accent-hover: #d4ff4d; --accent-soft: #24402a; --accent-text: #12302f;
+  --primary: #c0f01a; --primary-text: #12302f; --primary-hover: #d4ff4d; --primary-hover-text: #12302f; --primary-glow: rgba(192, 240, 26, .18);
   --bad: #ef7b72; --bad-soft: #3a1f1d; --warn: #e0a24a;
   --shadow: none;
 }
@@ -26,7 +31,7 @@
 html { font-size: clamp(11px, min(2.25vh, 1.25vw), 16px); }
 @media (max-width: 860px) { html { font-size: 16px; } }
 body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); color: var(--text);
-  font: 0.875rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  font: 0.875rem/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 .hidden { display: none !important; }
 
 /* ---------- topo ---------- */
@@ -49,7 +54,7 @@ body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; back
   justify-content: space-between; } /* campos distribuídos na altura; botão de busca na base */
 .form-actions { display: flex; flex-direction: column; gap: 0.625rem; }
 /* apresentação curta no topo do menu: para que serve e como usar */
-.intro { font-size: .82rem; line-height: 1.45; color: var(--muted); border-left: 3px solid var(--accent); padding-left: 0.625rem; }
+.intro { font-size: .82rem; line-height: 1.45; color: var(--muted); border-left: 3px solid var(--primary); padding-left: 0.625rem; }
 .intro p { margin: 0 0 0.375rem; }
 .intro ol { margin: 0; padding-left: 1.2em; }
 .intro li + li { margin-top: 0.125rem; }
@@ -101,9 +106,10 @@ details[open] > summary::before { transform: rotate(45deg); }
 
 /* ---------- botões ---------- */
 button { font: inherit; font-weight: 600; height: 2.375rem; padding: 0 1rem; border-radius: 8px; cursor: pointer;
-  border: 1px solid transparent; transition: background .15s, border-color .15s; }
-button.primary { background: var(--accent); color: var(--accent-text); }
-button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+  border: 1px solid transparent; transition: background .15s, border-color .15s, color .15s, box-shadow .15s, transform .15s; }
+button.primary { background: var(--primary); color: var(--primary-text); box-shadow: 0 4px 14px var(--primary-glow); }
+button.primary:hover:not(:disabled) { background: var(--primary-hover); color: var(--primary-hover-text); transform: translateY(-1px); }
+button.primary:disabled { box-shadow: none; }
 button.ghost { background: transparent; color: var(--text); border-color: var(--border); }
 button.ghost:hover:not(:disabled) { border-color: var(--muted); }
 button.block { width: 100%; height: 2.625rem; }

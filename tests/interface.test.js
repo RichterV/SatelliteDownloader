@@ -103,6 +103,22 @@ test('telas menores (notebooks): medidas em rem e fonte base proporcional à jan
   assert.match(app, /const rem = parseFloat\(getComputedStyle\(document\.documentElement\)\.fontSize\)/, 'prévia calcula a altura em rem');
 });
 
+test('paleta do site da Treevia: limão nos botões com texto petróleo, textos em petróleo e fonte Inter', () => {
+  const root = css.match(/^:root \{([^}]*)\}/m)[1];
+  assert.match(root, /--primary: #c0f01a;/, 'limão da marca');
+  assert.match(root, /--primary-text: #1d4c4e;/, 'texto petróleo sobre o limão (o limão não tem contraste como texto)');
+  assert.match(root, /--text: #1d4c4e;/, 'textos em petróleo');
+  assert.match(css, /button\.primary \{ background: var\(--primary\); color: var\(--primary-text\);/);
+  assert.match(css, /button\.primary:hover:not\(:disabled\) \{ background: var\(--primary-hover\); color: var\(--primary-hover-text\);/, 'hover invertido como no site');
+  // os dois temas escuros (preferência do sistema e data-theme) com os mesmos tokens
+  const darks = [...css.matchAll(/--bg: (#[0-9a-f]{6}); --card: (#[0-9a-f]{6});[^}]*?--primary: (#[0-9a-f]{6});/g)].map(m => m.slice(1).join());
+  assert.equal(darks.length, 3);
+  assert.equal(darks[1], darks[2], 'tema escuro igual nos dois seletores');
+  assert.match(css, /body \{[^}]*font: 0\.875rem\/1\.5 Inter,/);
+  assert.match(html, /<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com\/css2\?family=Inter[^"]*display=swap">/);
+  assert.match(html, /<meta name="theme-color" content="#1d4c4e">/);
+});
+
 test('layout cabe na tela: formulário limitado à altura da janela e lista de satélites rolável', () => {
   const rule = sel => (css.match(new RegExp('^' + sel.replace(/[.]/g, '\\.') + String.raw` \{([^}]*)\}`, 'm')) || [])[1] || '';
   assert.match(rule('.form'), /max-height:\s*calc\(100vh/);
