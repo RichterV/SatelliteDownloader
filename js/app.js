@@ -175,8 +175,9 @@ function availableComposites() {
 // (cabeçalho, dados da imagem, rodapé do cartão, resumo de "Cenas avaliadas" fechado e rodapé da página).
 function previewMaxHeight() {
   const cv = $('view'), panel = $('resultPanel').getBoundingClientRect();
-  const below = $('candPanel').classList.contains('hidden') ? 0 : 20 + 50; // gap + resumo fechado
-  const used = panel.bottom + window.scrollY - cv.height + below + 20 + document.querySelector('footer').offsetHeight;
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16; // medidas da interface em rem
+  const below = $('candPanel').classList.contains('hidden') ? 0 : rem * (1.25 + 3.125); // gap + resumo fechado
+  const used = panel.bottom + window.scrollY - cv.height + below + rem * 1.25 + document.querySelector('footer').offsetHeight;
   return Math.max(240, window.innerHeight - used);
 }
 

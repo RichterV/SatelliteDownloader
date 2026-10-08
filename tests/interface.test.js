@@ -60,7 +60,7 @@ test('header mostra o logo da Treevia ao lado do nome do app', () => {
   assert.match(brand, /<img class="brand-logo" src="logo\.png" alt="Treevia"/, 'logo com texto alternativo');
   assert.match(brand, /<span>Satellite Downloader<\/span>/);
   assert.doesNotMatch(brand, /<svg/, 'sem o ícone genérico antigo');
-  assert.match(css, /\.brand-logo \{[^}]*height: 28px/);
+  assert.match(css, /\.brand-logo \{[^}]*height: 1\.75rem/);
 });
 
 test('menu começa com uma apresentação curta: para que serve e três passos de uso', () => {
@@ -72,7 +72,7 @@ test('menu começa com uma apresentação curta: para que serve e três passos d
   assert.ok(intro.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().length < 320, 'curta');
   assert.match(css, /\.intro \{[^}]*font-size: \.82rem/);
   // só aparece quando sobra altura; em janelas baixas o menu também fica mais compacto
-  assert.match(css, /@media \(max-height: \d+px\) \{ \.intro \{ display: none; \} \.form \{ gap: \d+px; \}/, 'some em janelas baixas');
+  assert.match(css, /@media \(max-height: \d+px\) \{ \.intro \{ display: none; \} \.form \{ gap: [\d.]+rem; \}/, 'some em janelas baixas');
   // o grupo do satélite só encolhe com a lista de Outros aberta (senão o texto dele invadia a data)
   assert.match(css, /\.form > \.sensor-field:has\(\.sensor-list:not\(\.hidden\)\) \{ flex-shrink: 1; min-height: 0; \}/);
   assert.doesNotMatch(css, /^\.form > \.sensor-field \{/m, 'sem a regra que encolhia o grupo sempre');
@@ -88,12 +88,27 @@ test('rodapé: copyright da Treevia, autor com e-mail e "Powered by" com o logo 
   assert.match(css, /\.foot \{[^}]*justify-content: space-between/);
 });
 
+test('telas menores (notebooks): medidas em rem e fonte base proporcional à janela', () => {
+  assert.match(css, /html \{ font-size: clamp\(11px, min\(2\.25vh, 1\.25vw\), 16px\); \}/);
+  assert.match(css, /@media \(max-width: 860px\) \{ html \{ font-size: 16px; \} \}/, 'no celular a página rola: fonte normal');
+  // a reserva de altura (topo + margens + rodapé) acompanha a escala
+  assert.equal((css.match(/height: calc\(100vh - 9\.25rem - 2px\)/g) || []).length, 2, 'menu e cartão da animação');
+  assert.doesNotMatch(css, /calc\(100vh - \d+px\)/);
+  // interface (fora da animação) sem medidas de espaço/tamanho em px, exceto filetes de 1 px e a largura máxima
+  // (a fonte base do html é a única em px: é a régua das demais)
+  const ui = css.slice(0, css.indexOf('/* ---------- animação da tela vazia')).replace(/html \{[^}]*\}/g, '');
+  const px = [...ui.matchAll(/(?<![(\w-])(padding|margin[a-z-]*|gap|height|min-height|max-height|width|min-width|font-size|top|left|right|bottom):\s*([^;{}]*)/g)]
+    .filter(m => /\d+px/.test(m[2].replace(/\b1px\b|1280px/g, '')) && !/clamp|calc/.test(m[2]));
+  assert.deepEqual(px.map(m => m[0]), []);
+  assert.match(app, /const rem = parseFloat\(getComputedStyle\(document\.documentElement\)\.fontSize\)/, 'prévia calcula a altura em rem');
+});
+
 test('layout cabe na tela: formulário limitado à altura da janela e lista de satélites rolável', () => {
   const rule = sel => (css.match(new RegExp('^' + sel.replace(/[.]/g, '\\.') + String.raw` \{([^}]*)\}`, 'm')) || [])[1] || '';
   assert.match(rule('.form'), /max-height:\s*calc\(100vh/);
   // campos distribuídos na altura do menu; botão de busca (com o status) ancorado na base
   assert.match(rule('.form'), /justify-content: space-between/);
-  assert.match(css, /\.area-field \{ flex: 1 0 auto; max-height: \d+px; \}/, 'área de soltar cresce, com limite');
+  assert.match(css, /\.area-field \{ flex: 1 0 auto; max-height: [\d.]+rem; \}/, 'área de soltar cresce, com limite');
   assert.match(html, /<div class="field area-field">\s*<span class="label">Área<\/span>/);
   assert.match(html, /<div class="form-actions">\s*<button id="btnSearch"[^>]*>Buscar imagem<\/button>\s*<div id="status" class="status"><\/div>\s*<\/div>\s*<\/aside>/);
   // menu lateral estica até a altura da área da direita (animação ou prévia)
