@@ -63,6 +63,21 @@ test('header mostra o logo da Treevia ao lado do nome do app', () => {
   assert.match(css, /\.brand-logo \{[^}]*height: 28px/);
 });
 
+test('menu começa com uma apresentação curta: para que serve e três passos de uso', () => {
+  const form = html.match(/<aside class="card form">([\s\S]*?)<\/aside>/)[1];
+  assert.match(form, /^\s*<div class="intro">/, 'primeiro item do menu');
+  const intro = form.match(/<div class="intro">([\s\S]*?)<\/div>/)[1];
+  assert.match(intro, /<p>[^<]*sem nuvem[^<]*talhões[^<]*<\/p>/, 'diz para que serve');
+  assert.equal((intro.match(/<li>/g) || []).length, 3, 'três passos');
+  assert.ok(intro.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().length < 320, 'curta');
+  assert.match(css, /\.intro \{[^}]*font-size: \.82rem/);
+  // só aparece quando sobra altura; em janelas baixas o menu também fica mais compacto
+  assert.match(css, /@media \(max-height: \d+px\) \{ \.intro \{ display: none; \} \.form \{ gap: \d+px; \}/, 'some em janelas baixas');
+  // o grupo do satélite só encolhe com a lista de Outros aberta (senão o texto dele invadia a data)
+  assert.match(css, /\.form > \.sensor-field:has\(\.sensor-list:not\(\.hidden\)\) \{ flex-shrink: 1; min-height: 0; \}/);
+  assert.doesNotMatch(css, /^\.form > \.sensor-field \{/m, 'sem a regra que encolhia o grupo sempre');
+});
+
 test('layout cabe na tela: formulário limitado à altura da janela e lista de satélites rolável', () => {
   const rule = sel => (css.match(new RegExp('^' + sel.replace(/[.]/g, '\\.') + String.raw` \{([^}]*)\}`, 'm')) || [])[1] || '';
   assert.match(rule('.form'), /max-height:\s*calc\(100vh/);
@@ -75,7 +90,7 @@ test('layout cabe na tela: formulário limitado à altura da janela e lista de s
   assert.match(css, /\.layout \{[^}]*align-items: stretch/);
   assert.doesNotMatch(css.match(/\.layout \{[^}]*\}/)[0], /align-items: start/);
   assert.match(rule('.sensor-list'), /overflow-y:\s*auto/);
-  assert.match(css, /\.form > \.sensor-field \{[^}]*flex-shrink:\s*1/);
+  assert.match(css, /\.form > \.sensor-field:has\(\.sensor-list:not\(\.hidden\)\) \{[^}]*flex-shrink:\s*1/, 'lista de Outros encolhe e rola por dentro');
   assert.match(html, /class="field sensor-field"[\s\S]*id="sensorOther"/);
   assert.match(app, /maxH = previewMaxHeight\(\)/, 'prévia dimensionada para não rolar a página');
 });
