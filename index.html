@@ -34,7 +34,7 @@
 
 <main class="layout">
   <aside class="card form">
-    <div class="field">
+    <div class="field area-field">
       <span class="label">Área</span>
       <label class="drop" id="drop">
         <input type="file" id="file" multiple accept=".geojson,.json,.kml,.kmz,.zip,.shp,.dbf,.prj,.cpg,.shx">
@@ -77,8 +77,10 @@
       </div>
     </details>
 
-    <button id="btnSearch" class="primary block" disabled>Buscar imagem</button>
-    <div id="status" class="status"></div>
+    <div class="form-actions">
+      <button id="btnSearch" class="primary block" disabled>Buscar imagem</button>
+      <div id="status" class="status"></div>
+    </div>
   </aside>
 
   <section class="content">

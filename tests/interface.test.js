@@ -66,6 +66,11 @@ test('header mostra o logo da Treevia ao lado do nome do app', () => {
 test('layout cabe na tela: formulário limitado à altura da janela e lista de satélites rolável', () => {
   const rule = sel => (css.match(new RegExp('^' + sel.replace(/[.]/g, '\\.') + String.raw` \{([^}]*)\}`, 'm')) || [])[1] || '';
   assert.match(rule('.form'), /max-height:\s*calc\(100vh/);
+  // campos distribuídos na altura do menu; botão de busca (com o status) ancorado na base
+  assert.match(rule('.form'), /justify-content: space-between/);
+  assert.match(css, /\.area-field \{ flex: 1 0 auto; max-height: \d+px; \}/, 'área de soltar cresce, com limite');
+  assert.match(html, /<div class="field area-field">\s*<span class="label">Área<\/span>/);
+  assert.match(html, /<div class="form-actions">\s*<button id="btnSearch"[^>]*>Buscar imagem<\/button>\s*<div id="status" class="status"><\/div>\s*<\/div>\s*<\/aside>/);
   // menu lateral estica até a altura da área da direita (animação ou prévia)
   assert.match(css, /\.layout \{[^}]*align-items: stretch/);
   assert.doesNotMatch(css.match(/\.layout \{[^}]*\}/)[0], /align-items: start/);

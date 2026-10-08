@@ -41,7 +41,12 @@ body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; back
 
 /* ---------- formulário ---------- */
 /* o formulário cabe na tela (topo 54px + margens 40px + rodapé ~52px); a lista de satélites usa o espaço que sobrar */
-.form { padding: 20px; display: flex; flex-direction: column; gap: 18px; max-height: calc(100vh - 146px); overflow-y: auto; }
+.form { padding: 20px; display: flex; flex-direction: column; gap: 18px; max-height: calc(100vh - 146px); overflow-y: auto;
+  justify-content: space-between; } /* campos distribuídos na altura; botão de busca na base */
+.form-actions { display: flex; flex-direction: column; gap: 10px; }
+/* a área de soltar o arquivo usa parte da sobra de altura (até 200 px); o resto fica entre os grupos */
+.area-field { flex: 1 0 auto; max-height: 230px; }
+.area-field .drop { flex: 1 1 auto; max-height: 200px; }
 .form > * { flex-shrink: 0; }
 .form > .sensor-field { flex-shrink: 1; min-height: 0; }
 @media (max-width: 860px) { .form { max-height: none; } }
