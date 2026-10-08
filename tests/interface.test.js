@@ -55,9 +55,20 @@ test('card de preview (Open Graph) aponta para imagem existente', () => {
   assert.ok(fs.existsSync(path.join(ROOT, path.basename(og))));
 });
 
+test('header mostra o logo da Treevia ao lado do nome do app', () => {
+  const brand = html.match(/<div class="brand">([\s\S]*?)<\/div>/)[1];
+  assert.match(brand, /<img class="brand-logo" src="logo\.png" alt="Treevia"/, 'logo com texto alternativo');
+  assert.match(brand, /<span>Satellite Downloader<\/span>/);
+  assert.doesNotMatch(brand, /<svg/, 'sem o ícone genérico antigo');
+  assert.match(css, /\.brand-logo \{[^}]*height: 28px/);
+});
+
 test('layout cabe na tela: formulário limitado à altura da janela e lista de satélites rolável', () => {
   const rule = sel => (css.match(new RegExp('^' + sel.replace(/[.]/g, '\\.') + String.raw` \{([^}]*)\}`, 'm')) || [])[1] || '';
   assert.match(rule('.form'), /max-height:\s*calc\(100vh/);
+  // menu lateral estica até a altura da área da direita (animação ou prévia)
+  assert.match(css, /\.layout \{[^}]*align-items: stretch/);
+  assert.doesNotMatch(css.match(/\.layout \{[^}]*\}/)[0], /align-items: start/);
   assert.match(rule('.sensor-list'), /overflow-y:\s*auto/);
   assert.match(css, /\.form > \.sensor-field \{[^}]*flex-shrink:\s*1/);
   assert.match(html, /class="field sensor-field"[\s\S]*id="sensorOther"/);
@@ -283,7 +294,8 @@ test('tela vazia: só a cena de cálculos no zoom (o mapa florestal foi removido
   assert.match(svg, /<g class="sd-calc" clip-path="url\(#sd-screen-clip\)">/, 'cálculos recortados na tela');
   assert.doesNotMatch(svg, /class="sd-map"|data-scene|<pattern id=/, 'sem mapa, sem troca de cena, sem texturas do mapa');
   assert.match(svg, /<g class="sd-up"><g class="sd-up-calc">/, 'cartão de volta é o mini-gráfico');
-  assert.equal((html.match(/<svg[\s>]/g) || []).length, 2, 'sem <svg> aninhado (o teste e a revisão de quadros extraem até o primeiro </svg>)');
+  const emptyCard = html.slice(html.indexOf('id="emptyState"'), html.indexOf('id="resultPanel"'));
+  assert.equal((emptyCard.match(/<svg[\s>]/g) || []).length, 1, 'sem <svg> aninhado (o teste e a revisão de quadros extraem até o primeiro </svg>)');
   assert.match(css, /\.sd-calc \{[^}]*animation: sd-calc-show var\(--sd-t\) linear infinite/, 'oculta durante o zoom');
   assert.doesNotMatch(css, /@keyframes sd-map\b|\.sd-(map|stand|truck|harvester)\b/, 'CSS do mapa removido');
 });
