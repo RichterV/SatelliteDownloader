@@ -76,7 +76,7 @@ test('tela vazia: animação em loop (só CSS) que some quando a imagem aparece'
   const z = +css.match(/@keyframes sd-zoom \{[\s\S]*?translate\([^)]*\) scale\(([\d.]+)\)/)[1];
   assert.ok(140 * z <= 400 && 100 * z <= 260, `monitor cabe no zoom (scale ${z})`);
   assert.match(empty[1], /<image class="sd-logo" href="logo\.png"/, 'logo da Treevia no computador');
-  assert.match(css, /--sd-t: 13\.18s/, 'loop de 13,18 s (2 s de entrada orbitando + ~8,2 s da história com queda e zooms rápidos + 2 s de entrega na fazenda + 1 s de saída)');
+  assert.match(css, /--sd-t: 16\.18s/, 'loop de 16,18 s (2 s de entrada orbitando + ~8,2 s da história com queda e zooms rápidos + 2 s de entrega + 1 s de saída + 3 s de destaque da lupa para ler)');
   for (const k of ['sd-drop', 'sd-zoom', 'sd-calc-show', 'sd-up']) {
     assert.match(css, new RegExp(`@keyframes ${k} \\{`), k);
     assert.match(css, new RegExp(`animation: ${k} var\\(--sd-t\\)[^;]*infinite`), `${k} em loop`);
@@ -359,7 +359,7 @@ const T15 = () => +css.match(/--sd-t: ([\d.]+)s/)[1];
 const PAUSE = (() => { const g = css.match(/@keyframes sd-glow \{[^\n]*?([\d.]+)%, ([\d.]+)%, 100% \{/); return [+g[1], +g[2]]; })();
 
 test('tela vazia: ciclo ganhou 2 s de pausa para a entrega; satélite e cena parados nesse intervalo', () => {
-  assert.equal(T15(), 13.18);
+  assert.equal(T15(), 16.18);
   assert.ok(Math.abs((PAUSE[1] - PAUSE[0]) / 100 * T15() - 2) < 0.01, 'pausa de 2 s');
   for (const k of ['sd-orbit-front', 'sd-glow', 'sd-zoom', 'sd-drop', 'sd-up', 'sd-calc-show']) {
     const f = frames(k), a = f.find(([p]) => p === PAUSE[0]), b = f.find(([p]) => p === PAUSE[1]);
@@ -402,8 +402,9 @@ test('tela vazia: final com lupa sobre o talhão (árvores, sensores, cores de p
   assert.match(farm, /<text[^>]*>IMA 38,4 m³\/ha\/ano <tspan>▲<\/tspan><\/text>/);
   assert.match(farm, /<text[^>]*>Dados que geram resultado<\/text>/, 'lema da Treevia');
   assert.doesNotMatch(svg, /sd-farmer|sd-badge|sd-wave/, 'sem o gestor e o selo antigos');
-  // desenhada antes do satélite e do computador; feixe só na cópia da frente do satélite
-  assert.ok(svg.indexOf('class="sd-farm"') < svg.indexOf('class="sd-orbit-front"'));
+  // desenhada por último no sd-world (por cima do computador, para o destaque final); feixe só na cópia da frente do satélite
+  assert.ok(svg.indexOf('class="sd-farm"') > svg.indexOf('class="sd-flash"'), 'lupa depois do computador');
+  assert.ok(svg.indexOf('class="sd-farm"') < svg.indexOf('class="sd-packet"'), 'ainda dentro do sd-world');
   const back = svg.slice(svg.indexOf('class="sd-orbit-back"'), svg.indexOf('class="sd-globe"'));
   const front = svg.slice(svg.indexOf('class="sd-orbit-front"'), svg.indexOf('<!-- computador'));
   assert.doesNotMatch(back, /sd-give/);
@@ -466,4 +467,55 @@ test('tela vazia: sem animação (movimento reduzido) a lupa aparece completa: �
   assert.match(css, /\.sd-lens-scan \{[^}]*opacity: 0;/);
   for (const cls of ['sd-lens-tree', 'sd-lens-color', 'sd-lens-kpi', 'sd-lens-tag', 'sd-farm-pin'])
     assert.doesNotMatch(css.match(new RegExp(String.raw`\.${cls} \{[^}]*\}`))[0], /scale|opacity: 0/, cls);
+});
+
+// ---------- destaque final: a lupa vai ampliada para o centro e fica parada para leitura ----------
+test('tela vazia: destaque final (fundo escurece, lupa ampliada no centro com IMA e lema; pin e cone somem)', () => {
+  const farm = farmMarkup();
+  const dim = farm.match(/<rect class="sd-spot-dim" x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"/).slice(1).map(Number);
+  assert.ok(dim[0] < 0 && dim[1] < 0 && dim[0] + dim[2] > 400 && dim[1] + dim[3] > 260, 'fundo escuro cobre a vista toda, inclusive as margens fora do viewBox');
+  // lente, árvores, IMA e lema dentro do grupo ampliado; pin, anel e cone no grupo que some
+  const spot = farm.match(/<g class="sd-spot">([\s\S]*?)\n {12}<\/g>/)[1];
+  for (const cls of ['sd-lens-frame', 'sd-lens-tree', 'sd-lens-kpi', 'sd-lens-tag']) assert.ok(spot.includes(`class="${cls}`), cls);
+  const fade = farm.match(/<g class="sd-spot-fade">([\s\S]*?)\n {12}<\/g>/)[1];
+  for (const cls of ['sd-lens-cone', 'sd-farm-ring', 'sd-farm-pin']) assert.ok(fade.includes(`class="${cls}`), cls);
+  // ampliação: centro da lente vai para perto do centro da vista; lente inteira e lema dentro do desenho
+  const { cx, cy, r } = lens();
+  const [ox, oy] = css.match(/\.sd-spot \{ transform-origin: ([\d.]+)px ([\d.]+)px;/).slice(1).map(Number);
+  assert.deepEqual([ox, oy], [cx, cy], 'amplia em torno do centro da lente');
+  const z = css.match(/@keyframes sd-spot \{[^\n]*translate\((-?[\d.]+)px, (-?[\d.]+)px\) scale\(([\d.]+)\)/).slice(1).map(Number);
+  const [nx, ny, k] = [cx + z[0], cy + z[1], z[2]];
+  assert.ok(k >= 1.8, `ampliação ${k}x`);
+  assert.ok(Math.abs(nx - 200) < 10 && Math.abs(ny - 130) < 15, `centro da lente no meio da vista (${nx}, ${ny})`);
+  assert.ok(ny - r * k > 0 && nx - r * k > 0 && nx + r * k < 400, 'lente inteira na vista');
+  const tag = farm.match(/<g class="sd-lens-tag"><rect x="[\d.]+" y="([\d.]+)" width="[\d.]+" height="([\d.]+)"/).slice(1).map(Number);
+  assert.ok(ny + (tag[0] + tag[1] - cy) * k < 260, 'lema dentro da vista no destaque');
+  // texto efetivo no destaque (fonte x ampliação) grande o bastante para ler
+  const font = cls => +css.match(new RegExp(String.raw`\.${cls} text \{[^}]*font: 700 ([\d.]+)px`))[1];
+  assert.ok(font('sd-lens-kpi') * k >= 7 && font('sd-lens-tag') * k >= 8.5, 'IMA e lema legíveis no destaque');
+});
+
+test('tela vazia: destaque fica parado tempo suficiente para ler e só começa depois que o satélite sumiu', () => {
+  const T = T15(), sec = p => p / 100 * T;
+  const spot = frames('sd-spot'), zoomed = sec(spot.find(([, b]) => /scale\(/.test(b))[0]);
+  const spotStart = sec(spot.filter(([, b]) => /transform: none/.test(b)).at(-1)[0]);
+  const farmOut = sec(frames('sd-farm').filter(([, b]) => /opacity: 1/.test(b)).at(-1)[0]);
+  assert.ok(farmOut - zoomed >= 2.2, `lupa ampliada parada por ${(farmOut - zoomed).toFixed(2)} s`);
+  // lema já apareceu antes do destaque
+  const tagIn = sec(frames('sd-lens-tag').find(([, b]) => /opacity: 1/.test(b))[0]);
+  assert.ok(tagIn < spotStart, 'lema aparece antes do destaque');
+  // satélite: cópia da frente já saiu e a de trás some atrás da Terra antes do destaque (nada parado na borda)
+  const lastOn = k => sec(frames(k).filter(([, b]) => /opacity: 1/.test(b)).at(-1)[0]);
+  // (a cópia de trás termina de passar atrás da Terra já sob o fundo escuro, enquanto a lupa amplia)
+  assert.ok(lastOn('sd-orbit-front') <= spotStart && lastOn('sd-orbit-back') <= zoomed, 'satélite fora de cena no destaque');
+  assert.match(frames('sd-orbit-back').at(-1)[1], /opacity: 0/, 'cópia de trás termina invisível');
+  // pin e cone somem no começo do destaque; fundo escurece junto
+  assert.ok(Math.abs(sec(frames('sd-spot-fade').filter(([, b]) => /opacity: 1/.test(b)).at(-1)[0]) - spotStart) < 0.05);
+  assert.ok(Math.abs(sec(frames('sd-spot-dim').filter(([, b]) => /opacity: 0;/.test(b)).at(-1)[0]) - spotStart) < 0.05);
+});
+
+test('tela vazia: sem animação (movimento reduzido) não há fundo escuro nem ampliação', () => {
+  assert.match(css, /\.sd-spot-dim \{[^}]*opacity: 0;/);
+  assert.doesNotMatch(css.match(/\.sd-spot \{[^}]*\}/)[0], /transform:/, 'lupa no lugar original');
+  assert.doesNotMatch(css.match(/\.sd-spot-fade \{[^}]*\}/)[0], /opacity: 0/, 'pin e cone visíveis');
 });
