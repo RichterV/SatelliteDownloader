@@ -3,6 +3,7 @@ const $ = id => document.getElementById(id);
 const state = { geo: null, fileBase: 'talhoes', cands: [], idx: -1, img: null, run: 0, params: null, sel: null };
 
 $('date').value = Core.localDay(new Date());
+$('year').textContent = new Date().getFullYear(); // ano do copyright no rodapé
 
 
 // ---------- satélite ----------

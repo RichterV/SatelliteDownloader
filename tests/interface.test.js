@@ -78,6 +78,16 @@ test('menu começa com uma apresentação curta: para que serve e três passos d
   assert.doesNotMatch(css, /^\.form > \.sensor-field \{/m, 'sem a regra que encolhia o grupo sempre');
 });
 
+test('rodapé: copyright da Treevia, autor com e-mail e "Powered by" com o logo e o lema', () => {
+  const foot = html.match(/<footer>([\s\S]*?)<\/footer>/)[1];
+  assert.match(foot, /© <span id="year">\d{4}<\/span> Treevia Forest Technologies\. Todos os direitos reservados\./);
+  assert.match(foot, /Desenvolvido por Vinicius Richter · <a href="mailto:vinicius\.richter@treevia\.com\.br">/);
+  assert.match(foot, /Powered by <img class="foot-logo" src="logo\.png" alt="Treevia"/);
+  assert.match(foot, /For foresters visionaries, by foresters innovators\./);
+  assert.match(app, /\$\('year'\)\.textContent = new Date\(\)\.getFullYear\(\)/, 'ano atualizado sozinho');
+  assert.match(css, /\.foot \{[^}]*justify-content: space-between/);
+});
+
 test('layout cabe na tela: formulário limitado à altura da janela e lista de satélites rolável', () => {
   const rule = sel => (css.match(new RegExp('^' + sel.replace(/[.]/g, '\\.') + String.raw` \{([^}]*)\}`, 'm')) || [])[1] || '';
   assert.match(rule('.form'), /max-height:\s*calc\(100vh/);
