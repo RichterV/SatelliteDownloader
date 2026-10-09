@@ -90,7 +90,75 @@ function renderTable() {
 function showResult(show) {
   $('resultPanel').classList.toggle('hidden', !show);
   $('emptyState').classList.toggle('hidden', show);
+  animGate(!show);
 }
+
+// ---------- animação da tela vazia: 60 fps ----------
+// Toda animação CSS rodando custa recálculo de estilo e layout do SVG a cada quadro, mesmo invisível ou parada num valor
+// fixo. Cada animação fica pausada enquanto (1) algum grupo de ANIM_GATES que a contém está escondido (Core.visibleSpans)
+// ou (2) é do ciclo (--sd-t) e está num trecho sem mudança de valor (Core.changeSpans). Volta 0,3 s antes, com o mesmo
+// startTime de todas (as do CSS nascem juntas), então fica sincronizada. A fase vem de document.timeline: ler
+// currentTime/playState de uma CSSAnimation força recálculo de estilo a cada quadro.
+const ANIM_GATES = ['.sd-orbit-back', '.sd-ui', '.sd-calc', '.sd-give', '.sd-farm'];
+const anim = { on: false, ref: null, start: null, list: [], gates: [] };
+
+function animSetup() {
+  const svg = document.querySelector('.sd-anim');
+  anim.ref = svg.querySelector('.sd-world').getAnimations()[0];
+  if (!anim.ref) return false; // movimento reduzido: nada anima
+  anim.start = null;
+  anim.T = anim.ref.effect.getComputedTiming().duration;
+  anim.gates = ANIM_GATES.map(sel => {
+    const el = svg.querySelector(sel);
+    return { el, spans: Core.visibleSpans(el.getAnimations()[0].effect.getKeyframes()) };
+  });
+  anim.list = svg.getAnimations({ subtree: true }).map(a => {
+    const t = a.effect.target, tm = a.effect.getComputedTiming();
+    const cycle = tm.duration === anim.T && tm.direction === 'normal';
+    return {
+      a, on: true, delay: tm.delay / anim.T, delayMs: tm.delay, period: tm.duration * (tm.direction.includes('alternate') ? 2 : 1),
+      spans: cycle ? Core.changeSpans(a.effect.getKeyframes()) : null,
+      gates: anim.gates.filter(g => g.el !== t && g.el.contains(t)),
+    };
+  });
+  return true;
+}
+
+function animTick() {
+  if (!anim.on) return;
+  if (!anim.ref && !animSetup()) return;
+  anim.start ??= anim.ref.startTime; // fica pendente até o 1º quadro da animação
+  if (anim.start != null) {
+    const t = document.timeline.currentTime - anim.start, p = (t % anim.T) / anim.T, margin = 300 / anim.T;
+    for (const g of anim.gates) g.shown = Core.inSpans(p, g.spans, margin);
+    for (const x of anim.list) {
+      const q = ((p - x.delay) % 1 + 1) % 1;
+      const on = x.gates.every(g => g.shown) && (!x.spans || Core.inSpans(q, x.spans, margin));
+      // trecho parado em que a fase está: pausada, ao passar para outro (ex.: virada do ciclo com o grupo escondido)
+      // o valor segurado muda, então reposiciona
+      const seg = x.spans ? x.spans.filter(s => s[1] + margin < q).length : 0;
+      if (on === x.on && (on || seg === x.seg)) continue;
+      x.on = on; x.seg = seg;
+      if (on) x.a.startTime = anim.start;
+      else { x.a.pause(); x.a.currentTime = animHoldTime(x, t); }
+    }
+  }
+  requestAnimationFrame(animTick);
+}
+
+// tempo em que a animação fica pausada: o atual, mas nunca antes do animation-delay (lá o CSS mostra o estilo base,
+// que é o quadro final da história, e não o valor do trecho parado); avança períodos inteiros, mesma fase
+function animHoldTime(x, t) {
+  return t >= x.delayMs ? t : t + x.period * Math.ceil((x.delayMs - t) / x.period);
+}
+
+function animGate(on) {
+  if (on === anim.on) return;
+  anim.on = on;
+  anim.ref = null; // ao mostrar de novo, o CSS reinicia as animações
+  if (on) requestAnimationFrame(animTick);
+}
+animGate(true);
 
 // ---------- busca ----------
 async function runSearch() {

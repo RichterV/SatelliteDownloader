@@ -868,6 +868,49 @@ function ndviColor(v) {
   return NDVI_STOPS.at(-1)[1];
 }
 
+// ---------- animação da tela vazia ----------
+// Trechos [a, b] do ciclo (frações 0-1) entre keyframes vizinhos (formato de Animation.effect.getKeyframes()) em que
+// active(k1, k2) vale; pontas sem keyframe em 0 ou 1 (valor implícito do estilo base) contam como ativas, na dúvida.
+function keySpans(keyframes, active) {
+  const kf = [...keyframes].sort((a, b) => a.offset - b.offset);
+  if (kf[0].offset > 0) kf.unshift({ offset: 0, implicit: true });
+  if (kf[kf.length - 1].offset < 1) kf.push({ offset: 1, implicit: true });
+  const spans = [];
+  for (let i = 0; i + 1 < kf.length; i++) {
+    const a = kf[i].offset, b = kf[i + 1].offset;
+    if (b <= a || !(kf[i].implicit || kf[i + 1].implicit || active(kf[i], kf[i + 1]))) continue;
+    const last = spans[spans.length - 1];
+    if (last && last[1] >= a) last[1] = Math.max(last[1], b); else spans.push([a, b]);
+  }
+  return spans;
+}
+
+// trechos em que um grupo aparece: escondido = opacity 0 ou visibility hidden nas duas pontas; keyframe sem nenhuma
+// das duas conta como visível
+function visibleSpans(keyframes) {
+  const hidden = k => k.visibility === 'hidden' || (k.opacity != null && +k.opacity === 0);
+  return keySpans(keyframes, (a, b) => !(hidden(a) && hidden(b)));
+}
+
+// trechos em que o valor muda (alguma propriedade diferente entre keyframes vizinhos); fora deles a animação está
+// parada num valor fixo e pode ficar pausada sem diferença na tela. Se 100% difere de 0%, a virada do ciclo é um salto:
+// entra como trechos de largura zero em 0 e 1.
+function changeSpans(keyframes) {
+  const vals = k => JSON.stringify(Object.keys(k).filter(p => !['offset', 'computedOffset', 'easing', 'composite'].includes(p)).sort().map(p => [p, k[p]]));
+  const spans = keySpans(keyframes, (a, b) => vals(a) !== vals(b));
+  const kf = [...keyframes].sort((a, b) => a.offset - b.offset), first = kf[0], last = kf[kf.length - 1];
+  if (first.offset === 0 && last.offset === 1 && vals(first) !== vals(last)) {
+    if (!spans.length || spans[0][0] > 0) spans.unshift([0, 0]);
+    if (spans[spans.length - 1][1] < 1) spans.push([1, 1]);
+  }
+  return spans;
+}
+
+// fase p (0-1) dentro de algum trecho, com folga m antes e depois (o ciclo dá a volta: 0,99 está perto de 0)
+function inSpans(p, spans, m = 0) {
+  return spans.some(([a, b]) => [p - 1, p, p + 1].some(q => q >= a - m && q <= b + m));
+}
+
 // ---------- zip ----------
 function zipFile(name, buf) {
   return new Promise((resolve, reject) =>
@@ -876,7 +919,7 @@ function zipFile(name, buf) {
 
 globalThis.Core = {
   SENSORS, MODIS_SINU, readVectorFiles, zipFile, parseKML, parseGeoJSON, stacSearch, searchRange, orderCandidates, checkCandidate, pickCandidate, loadImage,
-  escHtml, localDay, sceneDate,
+  escHtml, localDay, sceneDate, visibleSpans, changeSpans, inSpans,
   buildGeoTIFF, percentiles, previewScale, maxZoom, fitView, clampView, viewTransform, zoomAt, panBy, canvasToPixel, pixelValues, pixelLonLat, hasNdvi, ndvi, ndviAt, ndviColor, NDVI_STOPS, addDays, isoDay, crsLabel, isGeographic,
   // expostos para os testes
   ensureProj, projectPolys, pointInRing, footprintContains, rasterize, signHref, assetOf, gridOf, epsgOf, itemDates,

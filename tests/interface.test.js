@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const { ROOT } = require('./helpers/core');
+const { ROOT, Core } = require('./helpers/core');
 
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const app = fs.readFileSync(path.join(ROOT, 'js', 'app.js'), 'utf8');
@@ -690,4 +690,55 @@ test('tela vazia: vento leve nas copas (troncos e dendrômetros parados) e linha
   assert.match(css, /\.sd-lens-sway \{ animation: sd-wind [\d.]+s ease-in-out infinite; \}/, 'loop próprio');
   const lens = farmMarkup().match(/<g clip-path="url\(#sd-lens-clip\)">[\s\S]*?<rect class="sd-lens-scan"/)[0];
   assert.ok((lens.match(/class="sd-wind-line"/g) || []).length >= 2, 'linhas de vento dentro da lupa');
+});
+
+// keyframes do CSS no formato de Animation.effect.getKeyframes() (offset 0-1 e propriedades), para testar sem navegador
+function cssKeyframes(name) {
+  const start = css.indexOf(`@keyframes ${name} {`) + `@keyframes ${name} {`.length;
+  let end = start;
+  for (let depth = 1; depth; end++) depth += css[end] === '{' ? 1 : css[end] === '}' ? -1 : 0;
+  const body = css.slice(start, end - 1);
+  const out = [];
+  for (const m of body.matchAll(/([\d.%,\s]+)\{([^}]*)\}/g)) {
+    const props = Object.fromEntries(m[2].split(';').map(s => s.split(':').map(x => x.trim())).filter(p => p[0]));
+    for (const sel of m[1].split(',')) out.push({ offset: parseFloat(sel) / 100, ...props });
+  }
+  return out;
+}
+
+test('animação a 60 fps: Core.visibleSpans acha os trechos visíveis pelos keyframes de opacity/visibility', () => {
+  assert.deepEqual(Core.visibleSpans([{ offset: 0, opacity: '0' }, { offset: .3, opacity: '0' }, { offset: .4, opacity: '1' }, { offset: .6, opacity: '1' }, { offset: .7, opacity: '0' }, { offset: 1, opacity: '0' }]), [[.3, .7]]);
+  assert.deepEqual(Core.visibleSpans([{ offset: 0, opacity: '1' }, { offset: .2, opacity: '0' }, { offset: .8, opacity: '0' }, { offset: 1, opacity: '1' }]), [[0, .2], [.8, 1]]);
+  // visibility hidden esconde mesmo com opacity 1; keyframe sem opacity nem visibility conta como visível
+  assert.deepEqual(Core.visibleSpans([{ offset: 0, opacity: '1', visibility: 'hidden' }, { offset: .5, opacity: '1', visibility: 'hidden' }, { offset: .6, transform: 'none' }, { offset: 1, opacity: '0' }]), [[.5, 1]]);
+  // trechos parados ficam de fora; salto entre 100% e 0% conta como mudança na virada
+  assert.deepEqual(Core.changeSpans([{ offset: 0, transform: 'scale(0)' }, { offset: .3, transform: 'scale(0)' }, { offset: .4, transform: 'scale(1)' }, { offset: 1, transform: 'scale(1)' }]), [[0, 0], [.3, .4], [1, 1]]);
+  assert.deepEqual(Core.changeSpans([{ offset: 0, opacity: '0' }, { offset: .5, opacity: '1' }, { offset: 1, opacity: '0' }]), [[0, 1]]);
+  assert.ok(Core.inSpans(.98, [[0, .2]], .03), 'folga atravessa o fim do ciclo');
+  assert.ok(!Core.inSpans(.5, [[0, .2], [.8, 1]], .03));
+  assert.ok(Core.inSpans(.29, [[.3, .7]], .02) && !Core.inSpans(.25, [[.3, .7]], .02));
+});
+
+test('animação a 60 fps: grupos escondidos boa parte do ciclo têm as animações pausadas fora do trecho visível', () => {
+  const gates = JSON.parse(app.match(/const ANIM_GATES = (\[[^\]]*\]);/)[1].replace(/'/g, '"'));
+  const T = parseFloat(css.match(/--sd-t: ([\d.]+)s/)[1]);
+  for (const sel of ['.sd-calc', '.sd-farm', '.sd-orbit-back']) assert.ok(gates.includes(sel), sel);
+  for (const sel of gates) {
+    const rule = css.slice(css.indexOf(`\n${sel} {`)).split('}')[0];
+    const name = rule.match(/animation: (sd-[\w-]+) var\(--sd-t\)/)[1];
+    const spans = Core.visibleSpans(cssKeyframes(name));
+    const shown = spans.reduce((s, [a, b]) => s + b - a, 0);
+    assert.ok(shown > 0 && shown < .8, `${sel}: escondido parte do ciclo (${(shown * T).toFixed(1)} s visível)`);
+    assert.ok((html.match(new RegExp(`class="${sel.slice(1)}[ "]`, 'g')) || []).length === 1, `${sel} único no SVG`);
+  }
+  // os cálculos só aparecem com o zoom completo e a lupa no fim do ciclo
+  const [calc] = Core.visibleSpans(cssKeyframes('sd-calc-show'));
+  assert.ok(calc[0] > .3 && calc[1] < .5, `cálculos ${calc}`);
+  const farm = Core.visibleSpans(cssKeyframes('sd-farm'));
+  assert.ok(farm.length === 1 && farm[0][0] > .6, `lupa ${farm}`);
+  // retomada sincronizada com o ciclo (mesmo startTime) e só enquanto a tela vazia aparece
+  assert.match(app, /a\.startTime = anim\.start/);
+  assert.match(app, /document\.timeline\.currentTime/, 'fase sem ler a CSSAnimation (forçaria recálculo de estilo)');
+  assert.match(app, /a\.pause\(\)/);
+  assert.match(app, /function showResult[\s\S]*?animGate\(!show\)/);
 });
